@@ -1,0 +1,52 @@
+dataset,column,type,unit,description,key_role,legacy_field
+species_prices,month,integer,1-12,Calendar month number,primary key,MONTH
+species_prices,month_name,character,English month name,Human-readable calendar month,none,MONTH
+species_prices,species_code,character,FAO 3-alpha code,Species identifier,primary key,Species
+species_prices,gsa,character,GSA code normalized as GSA##,Geographical subarea,primary key,GSA
+species_prices,price_eur_per_kg,double,EUR per kg,Observed species price,measure,Price
+species_price_monthly_mean,species_code,character,FAO 3-alpha code,Species identifier,primary key,Species
+species_price_monthly_mean,month,integer,1-12,Calendar month number,primary key,MONTH
+species_price_monthly_mean,month_name,character,English month name,Human-readable calendar month,none,MONTH
+species_price_monthly_mean,price_eur_per_kg,double,EUR per kg,Unweighted mean across GSAs with observations,measure,Price
+fao_species,isscaap_group,character,ISSCAAP code,FAO species-group code,attribute,ISSCAAP
+fao_species,taxonomic_code,character,ASFIS taxonomic code,Taxonomic identifier,alternate key,TAXOCODE
+fao_species,species_code,character,FAO 3-alpha code,Species identifier,primary key,3A_CODE
+fao_species,scientific_name,character,NA,Scientific name,attribute,Scientific_name
+fao_species,english_name,character,NA,English common name,attribute,English_name
+fao_species,author,character,NA,Taxonomic authority,attribute,Author
+fao_species,family,character,NA,Taxonomic family,attribute,Family
+fao_species,order,character,NA,Taxonomic order,attribute,Order
+fao_species,statistics_data,character,Yes/No,FAO statistics-data flag,attribute,Stats_data
+fleet_register,vessel_id,character,CFR or source identifier,Vessel identifier,primary key,CFR
+fleet_register,loa_m,double,m,Vessel length overall,measure,loa
+species_depth_ranges,species_code,character,FAO 3-alpha code,Species identifier,intended primary key,Species
+species_depth_ranges,scientific_name,character,NA,Scientific name,attribute,Name
+species_depth_ranges,min_depth_m,double,m,Minimum depth included in potential habitat,measure,minD
+species_depth_ranges,max_depth_m,double,m,Maximum depth included in potential habitat,measure,maxD
+species_depth_ranges,record_status,character,NA,Validation status for the intended species key,attribute,derived
+harbours,harbour_name,character,NA,Uppercase harbour name,primary key,PORT
+harbours,longitude,double,decimal degrees,Longitude in EPSG:4326,coordinate,LON
+harbours,latitude,double,decimal degrees,Latitude in EPSG:4326,coordinate,LAT
+harbours,geometry,POINT EPSG:4326,decimal degrees,Harbour point geometry,geometry,derived
+lpue_thresholds,species_code,character,FAO 3-alpha code,Species identifier,primary key,Species
+lpue_thresholds,gear_code,character,gear code,Fishing gear identifier,primary key,column name
+lpue_thresholds,upper_quantile_probability,double,probability,Quantile used to cap the upper LPUE tail,measure,cell value
+lpue_thresholds,is_configured,logical,TRUE/FALSE,Whether a threshold is defined for the species-gear pair,attribute,derived
+fuel_consumption_parameters,gear_code,character,gear code,Fishing gear identifier,primary key,Gear
+fuel_consumption_parameters,loa_exponent,double,dimensionless,Exponent applied to LOA in the legacy fuel formula,parameter,m
+fuel_consumption_parameters,fuel_coefficient,double,to be documented,Coefficient multiplying LOA and activity hours in the legacy fuel formula,parameter,q
+economic_reference,gsa,character,GSA code normalized as GSA##,Geographical subarea,primary key,GSA
+economic_reference,fishing_technique_code,character,fishing-technique code,Fishing technique rather than gear type,primary key,Gear
+economic_reference,vessel_length_class,character,FDI length class,Vessel length segment,primary key,FS
+economic_reference,operating_cost,double,to be confirmed,Operating cost reference value,measure,OC
+economic_reference,energy_cost,double,to be confirmed,Energy cost reference value,measure,EC
+economic_reference,labour_cost,double,to be confirmed,Labour cost reference value,measure,LC
+economic_reference,fishing_days,double,days,Fishing-day reference value,measure,FD
+economic_reference,investment,double,to be confirmed,Investment reference value,measure,INV
+economic_reference,reference_vessel_count,double,vessel equivalents,Reference fleet size or averaged vessel count,measure,n
+economic_reference,gross_value_landings,double,to be confirmed,Gross value of landings reference value,measure,GVL
+nisea_reference,indicator_code,character,indicator code,Economic indicator identifier,primary key,Indicator
+nisea_reference,indicator_name,character,NA,Expanded economic indicator name,attribute,derived
+nisea_reference,gear_code,character,gear code,Fishing gear identifier,primary key,Gear
+nisea_reference,reference_value,double,to be confirmed,NISEA comparison value,measure,value
+nisea_reference,source,character,NA,Source label,attribute,source

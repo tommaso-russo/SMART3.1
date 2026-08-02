@@ -1,0 +1,11 @@
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# macOS
+.DS_Store
+
+# Local reference-data inputs and generated outputs
+data-raw/SMART31_reference_inputs_raw.RData
+data/reference/

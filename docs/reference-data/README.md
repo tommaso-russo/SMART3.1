@@ -70,10 +70,10 @@ be committed to a public repository yet.
 
 | Dataset | Recommended GitHub treatment |
 |---|---|
-| `species_prices` and its monthly mean | Hold until data source, currency year and reuse permission are documented |
+| `species_prices` and its monthly mean | Hold until data source, currency year and reuse permission are documented; zero prices are retained as valid values indicating species with no commercial value |
 | `fao_species` | Prefer a versioned download from the official FAO/ASFIS source rather than vendoring the full table |
 | `fleet_register` | Keep local or reconstruct from the official fleet-register source; do not publish this copy yet |
-| `species_depth_ranges` | Hold until the `SYC` conflict and scientific sources are resolved |
+| `species_depth_ranges` | The `SYC` conflict was resolved by selecting the validated 100–400 m interval; hold until the scientific sources and reuse conditions are documented |
 | `harbours` | Hold until source and reuse conditions are documented |
 | `lpue_thresholds` | Suitable as methodological configuration after the missing LLS policy is confirmed |
 | `fuel_consumption_parameters` | Suitable with complete citation, formula and units |

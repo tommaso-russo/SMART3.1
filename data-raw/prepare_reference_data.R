@@ -122,6 +122,43 @@ add_issue <- function(severity, dataset, check, details, action_required) {
   )
 }
 
+
+normalize_month <- function(x) {
+  x_chr <- trimws(as.character(x))
+  month_num <- suppressWarnings(as.integer(x_chr))
+
+  unresolved <- is.na(month_num)
+
+  if (any(unresolved)) {
+    month_key <- tolower(x_chr[unresolved])
+
+    month_from_name <- match(month_key, tolower(month.name))
+    month_from_abbr <- match(month_key, tolower(month.abb))
+
+    month_num[unresolved] <- ifelse(
+      !is.na(month_from_name),
+      month_from_name,
+      month_from_abbr
+    )
+  }
+
+  if (anyNA(month_num) || any(month_num < 1L | month_num > 12L)) {
+    invalid_values <- unique(x_chr[
+      is.na(month_num) | month_num < 1L | month_num > 12L
+    ])
+
+    stop(
+      paste0(
+        "Invalid month values: ",
+        paste(invalid_values, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+
+  month_num
+}
+
 # -----------------------------------------------------------------------------
 # Species prices
 # -----------------------------------------------------------------------------
@@ -146,62 +183,113 @@ species_prices <- data.frame(
 if (anyNA(species_prices[c("species_code", "gsa", "price_eur_per_kg")])) {
   stop("Dataset 'prices' contains missing or invalid required values.", call. = FALSE)
 }
+# Zero is a valid economic value for species with no commercial value.
+# Only negative or non-finite prices are invalid.
 if (any(!is.finite(species_prices$price_eur_per_kg)) ||
-    any(species_prices$price_eur_per_kg <= 0)) {
-  stop("Dataset 'prices' contains non-positive or non-finite prices.", call. = FALSE)
+    any(species_prices$price_eur_per_kg < 0)) {
+  stop(
+    "Dataset 'prices' contains negative or non-finite prices.",
+    call. = FALSE
+  )
 }
 
-assert_unique(species_prices, c("month", "species_code", "gsa"), "species_prices")
+assert_unique(
+  species_prices,
+  c("month", "species_code", "gsa"),
+  "species_prices"
+)
 species_prices <- species_prices[
-  order(species_prices$species_code, species_prices$month, species_prices$gsa),
+  order(
+    species_prices$species_code,
+    species_prices$month,
+    species_prices$gsa
+  ),
 ]
 row.names(species_prices) <- NULL
 
-# This is an unweighted mean across whichever GSAs have an observed price for a
-# species-month. Missing prices remain missing; they are never replaced by zero.
-species_price_monthly_mean <- aggregate(
-  price_eur_per_kg ~ species_code + month + month_name,
-  data = species_prices,
-  FUN = mean
+# The source table agg_price provides the canonical monthly price by species.
+# Price = 0 is retained as an observed value indicating no commercial value;
+# it is not interpreted as missing and is not imputed.
+agg_price_raw <- as_table("agg_price")
+assert_columns(
+  agg_price_raw,
+  c("Species", "MONTH", "Price"),
+  "agg_price"
 )
-species_price_monthly_mean <- species_price_monthly_mean[
-  order(species_price_monthly_mean$species_code, species_price_monthly_mean$month),
-]
-row.names(species_price_monthly_mean) <- NULL
+
+
+
+
+agg_month <- normalize_month(agg_price_raw$MONTH)
+
+species_price_monthly_mean <- data.frame(
+  species_code = clean_character(
+    agg_price_raw$Species,
+    upper = TRUE
+  ),
+  month = agg_month,
+  month_name = month.name[agg_month],
+  price_eur_per_kg = as.numeric(agg_price_raw$Price),
+  stringsAsFactors = FALSE
+)
+
+if (anyNA(
+  species_price_monthly_mean[
+    c("species_code", "month", "price_eur_per_kg")
+  ]
+)) {
+  stop(
+    "Dataset 'agg_price' contains missing or invalid required values.",
+    call. = FALSE
+  )
+}
+
+if (any(!is.finite(
+  species_price_monthly_mean$price_eur_per_kg
+)) ||
+any(species_price_monthly_mean$price_eur_per_kg < 0)) {
+  stop(
+    "Dataset 'agg_price' contains negative or non-finite prices.",
+    call. = FALSE
+  )
+}
+
 assert_unique(
   species_price_monthly_mean,
   c("species_code", "month"),
   "species_price_monthly_mean"
 )
 
-agg_price_raw <- as_table("agg_price")
-assert_columns(agg_price_raw, c("Species", "MONTH", "Price"), "agg_price")
-zero_placeholders <- sum(as.numeric(agg_price_raw$Price) == 0, na.rm = TRUE)
-if (zero_placeholders > 0L) {
-  add_issue(
-    "error",
-    "species_price_monthly_mean",
-    "artificial_zero_prices",
-    paste0(
-      zero_placeholders,
-      " legacy rows use Price = 0 for species without observations. These rows are excluded from the standardized mean-price table."
-    ),
-    "Decide how missing species prices will be estimated; do not interpret zero as an observed market price."
-  )
-}
+species_price_monthly_mean <- species_price_monthly_mean[
+  order(
+    species_price_monthly_mean$species_code,
+    species_price_monthly_mean$month
+  ),
+]
+row.names(species_price_monthly_mean) <- NULL
 
 price_coverage <- aggregate(
   gsa ~ species_code + month,
   data = species_prices,
   FUN = length
 )
-if (any(price_coverage$gsa < length(unique(species_prices$gsa)))) {
+
+if (any(
+  price_coverage$gsa < length(unique(species_prices$gsa))
+)) {
   add_issue(
     "warning",
     "species_prices",
     "incomplete_gsa_coverage",
-    "Not every species-month is represented in all five GSAs; monthly means are unweighted means across available GSAs.",
-    "Confirm whether an unweighted mean is methodologically appropriate or provide weights/imputation rules."
+    paste(
+      "Not every species-month is represented in all five GSAs.",
+      "The GSA-specific price table therefore has incomplete",
+      "spatial coverage."
+    ),
+    paste(
+      "Account for incomplete coverage in analyses requiring",
+      "GSA-specific prices."
+    )
   )
 }
 
@@ -287,24 +375,72 @@ if (anyNA(species_depth_ranges) ||
   stop("Dataset 'ranges' contains missing or invalid depth limits.", call. = FALSE)
 }
 
-depth_duplicate <- duplicate_key(species_depth_ranges, "species_code")
+# Source review confirmed that the defensible depth range for
+# Scyliorhinus canicula (SYC) is 100-400 m. The alternative
+# legacy record (10-200 m) is therefore excluded.
+syc_rows <- species_depth_ranges$species_code == "SYC"
+
+syc_ranges_found <- paste(
+  species_depth_ranges$min_depth_m[syc_rows],
+  species_depth_ranges$max_depth_m[syc_rows],
+  sep = "-"
+)
+
+expected_syc_ranges <- c("10-200", "100-400")
+
+if (!identical(
+  sort(syc_ranges_found),
+  sort(expected_syc_ranges)
+)) {
+  stop(
+    paste(
+      "Unexpected source records for species code SYC.",
+      "Review the depth-range resolution before proceeding."
+    ),
+    call. = FALSE
+  )
+}
+
+species_depth_ranges <- species_depth_ranges[
+  !(
+    species_depth_ranges$species_code == "SYC" &
+      species_depth_ranges$min_depth_m == 10 &
+      species_depth_ranges$max_depth_m == 200
+  ),
+]
+
+depth_duplicate <- duplicate_key(
+  species_depth_ranges,
+  "species_code"
+)
+
 species_depth_ranges$record_status <- ifelse(
-  depth_duplicate,
-  "requires_review_duplicate_species_code",
+  species_depth_ranges$species_code == "SYC",
+  "validated_selected_depth_range",
   "validated_unique_key"
 )
 
+species_depth_ranges$record_status[depth_duplicate] <-
+  "requires_review_duplicate_species_code"
+
 if (any(depth_duplicate)) {
-  duplicate_codes <- sort(unique(species_depth_ranges$species_code[depth_duplicate]))
+  duplicate_codes <- sort(unique(
+    species_depth_ranges$species_code[depth_duplicate]
+  ))
+
   add_issue(
     "error",
     "species_depth_ranges",
     "conflicting_duplicate_key",
     paste0(
-      "Duplicated species code(s): ", paste(duplicate_codes, collapse = ", "),
-      ". Both source records are retained and marked for review."
+      "Duplicated species code(s): ",
+      paste(duplicate_codes, collapse = ", "),
+      ". Source records are retained and marked for review."
     ),
-    "Select and document one defensible depth range for every duplicated species code before using this table in the pipeline."
+    paste(
+      "Select and document one defensible depth range for every",
+      "duplicated species code before using this table."
+    )
   )
 }
 species_depth_ranges <- species_depth_ranges[

@@ -1,0 +1,11 @@
+"dataset","file","rows","publication_status","size_bytes"
+"species_prices","species_prices.rds",779,"hold_source_and_licence_review",6156
+"species_price_monthly_mean","species_price_monthly_mean.rds",264,"derived_follows_species_prices",1772
+"fao_species","fao_species.rds",12771,"prefer_reproducible_official_download",297084
+"fleet_register","fleet_register.rds",26140,"keep_local_or_retrieve_from_official_source",58708
+"species_depth_ranges","species_depth_ranges.rds",33,"hold_methodological_and_source_review",860
+"lpue_thresholds","lpue_thresholds.rds",44,"review_then_publish_as_method_configuration",348
+"fuel_consumption_parameters","fuel_consumption_parameters.rds",4,"publish_with_complete_citation",272
+"economic_reference","economic_reference.rds",10,"do_not_publish_without_permission",876
+"nisea_reference","nisea_reference.rds",10,"do_not_publish_without_permission",396
+"harbours","harbours.gpkg",368,"hold_source_and_licence_review",143360

@@ -1,0 +1,4 @@
+"severity","dataset","check","details","action_required"
+"warning","species_prices","incomplete_gsa_coverage","Not every species-month is represented in all five GSAs. The GSA-specific price table therefore has incomplete spatial coverage.","Account for incomplete coverage in analyses requiring GSA-specific prices."
+"warning","fleet_register","missing_vessel_id","1 row has no CFR/vessel identifier and was removed.","Verify the source row if the vessel with LOA 40.7 m must be retained."
+"warning","lpue_thresholds","all_thresholds_missing_for_gear","All 22 LLS upper-quantile thresholds are missing. The records are retained with is_configured = FALSE.","Confirm that LLS values should remain uncapped, or define and justify LLS thresholds."

@@ -167,8 +167,13 @@ IBM2eco <- function(
     dplyr::summarise(
       loa = one_numeric_value(.data$loa, "loa"),
       ntrip = one_numeric_value(.data$ntrip, "ntrip"),
-      fishing_time = sum_require_complete(.data$fishing_time),
-      effort = sum_require_complete(.data$effort),
+
+      # Use temporary output names here. In dplyr::summarise(), a name created
+      # earlier in the same call can mask the corresponding input column. If
+      # this were called "fishing_time", the expressions below would see the
+      # single monthly total instead of the original vector of cell values.
+      fishing_time_total = sum_require_complete(.data$fishing_time),
+      effort_total = sum_require_complete(.data$effort),
 
       fishing_time_with_lpue = sum(
         .data$fishing_time[.data$has_lpue]
@@ -194,6 +199,10 @@ IBM2eco <- function(
       },
 
       .groups = "drop"
+    ) %>%
+    dplyr::rename(
+      fishing_time = fishing_time_total,
+      effort = effort_total
     ) %>%
     dplyr::mutate(
       lpue_effort_coverage = dplyr::if_else(

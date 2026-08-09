@@ -17,6 +17,7 @@ prepare_economic_rates <- function(
     target_groups = NULL,
     gear_crosswalk = NULL,
     vessel_length_crosswalk = NULL,
+    segment_crosswalk = NULL,
     missing_segment_method = c("error", "gear_pooled")
 ) {
   reference_values <- match.arg(reference_values)
@@ -423,6 +424,134 @@ prepare_economic_rates <- function(
       )
     )
 
+  # Optional, explicitly documented substitutions for target Gear-VL pairs
+  # whose exact reference segment is unavailable. Exact matches always retain
+  # priority; this table is consulted only for unmatched targets.
+  explicit_fallback_targets <- rates_by_segment[0, ] %>%
+    dplyr::mutate(
+      Gear = character(),
+      VL = character(),
+      requested_reference_VL = character(),
+      reference_VL_used = character(),
+      economic_rate_source = character(),
+      .before = 1
+    )
+
+  if (!is.null(segment_crosswalk) && nrow(unmatched_targets) > 0L) {
+    segment_crosswalk_required <- c(
+      "Gear",
+      "VL",
+      "fallback_fishing_technique_code",
+      "fallback_vessel_length_class"
+    )
+
+    missing_segment_crosswalk_columns <- setdiff(
+      segment_crosswalk_required,
+      names(segment_crosswalk)
+    )
+
+    if (length(missing_segment_crosswalk_columns) > 0L) {
+      stop(
+        "Missing columns in 'segment_crosswalk': ",
+        paste(missing_segment_crosswalk_columns, collapse = ", "),
+        call. = FALSE
+      )
+    }
+
+    segment_crosswalk_prepared <- segment_crosswalk %>%
+      dplyr::transmute(
+        Gear = toupper(trimws(as.character(.data$Gear))),
+        VL = toupper(trimws(as.character(.data$VL))),
+        fallback_reference_Gear = toupper(trimws(as.character(
+          .data$fallback_fishing_technique_code
+        ))),
+        fallback_reference_VL = toupper(trimws(as.character(
+          .data$fallback_vessel_length_class
+        )))
+      ) %>%
+      dplyr::distinct()
+
+    if (
+      anyNA(segment_crosswalk_prepared) ||
+        any(!nzchar(segment_crosswalk_prepared$Gear)) ||
+        any(!nzchar(segment_crosswalk_prepared$VL)) ||
+        any(!nzchar(segment_crosswalk_prepared$fallback_reference_Gear)) ||
+        any(!nzchar(segment_crosswalk_prepared$fallback_reference_VL))
+    ) {
+      stop(
+        "'segment_crosswalk' contains missing or empty values.",
+        call. = FALSE
+      )
+    }
+
+    if (anyDuplicated(segment_crosswalk_prepared[c("Gear", "VL")])) {
+      stop(
+        "'segment_crosswalk' must contain at most one fallback per Gear-VL pair.",
+        call. = FALSE
+      )
+    }
+
+    explicit_fallback_candidates <- unmatched_targets %>%
+      dplyr::inner_join(
+        segment_crosswalk_prepared,
+        by = c("Gear", "VL"),
+        relationship = "many-to-one"
+      )
+
+    invalid_explicit_fallbacks <- explicit_fallback_candidates %>%
+      dplyr::anti_join(
+        rates_by_segment,
+        by = c(
+          "fallback_reference_Gear" = "reference_Gear",
+          "fallback_reference_VL" = "reference_VL"
+        )
+      )
+
+    if (nrow(invalid_explicit_fallbacks) > 0L) {
+      invalid_labels <- paste0(
+        invalid_explicit_fallbacks$Gear,
+        "-",
+        invalid_explicit_fallbacks$VL,
+        " -> ",
+        invalid_explicit_fallbacks$fallback_reference_Gear,
+        "-",
+        invalid_explicit_fallbacks$fallback_reference_VL
+      )
+
+      stop(
+        "An explicit economic fallback is unavailable in EcoRef for: ",
+        paste(invalid_labels, collapse = ", "),
+        call. = FALSE
+      )
+    }
+
+    explicit_fallback_targets <- explicit_fallback_candidates %>%
+      dplyr::select(-.data$reference_Gear) %>%
+      dplyr::inner_join(
+        rates_by_segment,
+        by = c(
+          "fallback_reference_Gear" = "reference_Gear",
+          "fallback_reference_VL" = "reference_VL"
+        ),
+        relationship = "many-to-one"
+      ) %>%
+      dplyr::mutate(
+        reference_Gear = .data$fallback_reference_Gear,
+        reference_VL_used = .data$fallback_reference_VL,
+        economic_rate_source = "explicit_adjacent_segment"
+      ) %>%
+      dplyr::select(
+        -.data$fallback_reference_Gear,
+        -.data$fallback_reference_VL
+      )
+
+    unmatched_targets <- unmatched_targets %>%
+      dplyr::anti_join(
+        segment_crosswalk_prepared,
+        by = c("Gear", "VL")
+      )
+  }
+
   if (
     nrow(unmatched_targets) > 0L &&
       missing_segment_method == "error"
@@ -552,6 +681,7 @@ prepare_economic_rates <- function(
 
   dplyr::bind_rows(
     exact_targets,
+    explicit_fallback_targets,
     fallback_targets
   ) %>%
     dplyr::select(dplyr::all_of(output_columns)) %>%

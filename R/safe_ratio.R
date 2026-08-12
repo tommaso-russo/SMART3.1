@@ -6,3 +6,4 @@ safe_ratio <- function(numerator, denominator) {
   out[valid] <- numerator[valid] / denominator[valid]
   out
 }
+

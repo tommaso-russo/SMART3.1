@@ -622,4 +622,3 @@ IBM2eco <- function(
     diagnostics = diagnostics
   )
 }
-

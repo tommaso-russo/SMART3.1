@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="docs/images/smart31_logo_v2.png"
+       alt="SMART3.1 logo"
+       width="560">
+</p>
+
 # SMART3.1
 
 ### Spatially explicit, age-aware and bio-economic modelling for fisheries management

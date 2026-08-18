@@ -354,13 +354,6 @@ The scenario-sensitive value for modelled species is catch multiplied by the fut
 
 #### Economic evaluation
 
-For gears with valid fishing and steaming fuel rates:
-
-$$
-FC=q^{fish}F^*+q^{steam}S^*,
-\qquad EC=FC\times P^{fuel}.
-$$
-
 When a physical fuel model is unavailable, EC is calculated through the explicit vessel-gear `EC_share`. Other costs and labour costs use `OC_share` and `LC_share`:
 
 $$

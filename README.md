@@ -328,7 +328,7 @@ For every proposed spatial allocation, SMART3.1 recalculates physical activity, 
 For a vessel-month-gear with $N$ trips, mean water distance $\bar d$ and steaming speed $v$:
 
 $$
-S^{*}=\frac{2N\bar d}{v}.
+S^{\star}=\frac{2N\bar d}{v}.
 $$
 
 Available time is bounded by sea days:
@@ -340,9 +340,9 @@ $$
 Fishing time responds to the change in steaming through the configured elasticity $\varepsilon$ and is capped by the remaining physical clock:
 
 $$
-F^{*}=\min\left[
-\max\left(0,F^{ref}-\varepsilon(S^{*}-S^{ref})\right),
-\max\left(0,24D-S^{*}\right)
+F^{\star}=\min\left[
+\max\left(0,F^{ref}-\varepsilon(S^{\star}-S^{ref})\right),
+\max\left(0,24D-S^{\star}\right)
 \right].
 $$
 
@@ -366,7 +366,7 @@ The scenario-sensitive value for modelled species is catch multiplied by the fut
 For gears with valid fishing and steaming fuel rates:
 
 $$
-FC=q^{fish}F^{*}+q^{steam}S^{*},
+FC=q^{fish}F^{\star}+q^{steam}S^{\star},
 \qquad EC=FC\times P^{fuel}.
 $$
 

@@ -337,16 +337,7 @@ $$
 T^{available}=24D.
 $$
 
-Fishing time responds to the change in steaming through the configured elasticity $\varepsilon$ and is capped by the remaining physical clock:
-
-$$
-F^*=\min\left[
-\max\left(0,F^{ref}-\varepsilon(S^*-S^{ref})\right),
-\max\left(0,24D-S^*\right)
-\right].
-$$
-
-If steaming alone exceeds `maximum_clock_hours_per_sea_day × days_scenario_gear`, the candidate is rejected.
+Fishing time responds to the change in steaming through the configured elasticity $\varepsilon$, but if steaming alone exceeds `maximum_clock_hours_per_sea_day × days_scenario_gear`, the candidate is rejected.
 
 #### Production and prices
 

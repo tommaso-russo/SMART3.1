@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">SMART3.1 scenario preparation</title>
+  <desc id="desc">How closures, selectivity changes, permanent cessation and compensation mechanisms are translated into vessel-level simulation constraints.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" x2="1"><stop offset="0" stop-color="#073b5c"/><stop offset="1" stop-color="#087f8c"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0b2638" flood-opacity="0.13"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#526b79"/></marker>
+    <style>
+      .title{font:700 34px Arial,sans-serif;fill:#fff}.subtitle{font:400 18px Arial,sans-serif;fill:#d8f1f3}.section{font:700 15px Arial,sans-serif;letter-spacing:1.4px;fill:#087f8c}
+      .head{font:700 22px Arial,sans-serif;fill:#123247}.body{font:400 16px Arial,sans-serif;fill:#294a5d}.small{font:400 14px Arial,sans-serif;fill:#4c6675}
+      .formula{font:700 17px Arial,sans-serif;fill:#17526a}.warn{font:700 15px Arial,sans-serif;fill:#9d4b17}
+    </style>
+  </defs>
+  <rect width="1440" height="900" fill="#f5f9fb"/><rect width="1440" height="120" fill="url(#header)"/>
+  <text x="54" y="54" class="title">From management measures to a feasible SMART3.1 scenario</text>
+  <text x="54" y="88" class="subtitle">Rules alter access, LPUE or fleet capacity; compensation mechanisms alter annual days only when linked to another measure.</text>
+
+  <text x="55" y="160" class="section">A · DEFINE MANAGEMENT MEASURES</text>
+  <g filter="url(#shadow)">
+    <rect x="55" y="185" width="305" height="120" rx="16" fill="#fff" stroke="#4d98bd" stroke-width="2"/>
+    <rect x="55" y="325" width="305" height="120" rx="16" fill="#fff" stroke="#4d98bd" stroke-width="2"/>
+    <rect x="55" y="465" width="305" height="120" rx="16" fill="#fff" stroke="#9b87c5" stroke-width="2"/>
+    <rect x="55" y="605" width="305" height="120" rx="16" fill="#fff" stroke="#c56a59" stroke-width="2"/>
+  </g>
+  <text x="80" y="222" class="head">Spatial closure</text><text x="80" y="252" class="body">Remove selected grid cells</text><text x="80" y="277" class="small">optionally by gear, vessel or month</text>
+  <text x="80" y="362" class="head">Temporal closure</text><text x="80" y="392" class="body">Close selected months</text><text x="80" y="417" class="small">all cells when id_grid = NULL</text>
+  <text x="80" y="502" class="head">Selectivity rule</text><text x="80" y="532" class="body">Transform future LPUE</text><text x="80" y="557" class="small">by species, gear, month and/or cell</text>
+  <text x="80" y="642" class="head">Permanent cessation</text><text x="80" y="672" class="body">Remove known CFRs</text><text x="80" y="697" class="small">their effort is not redistributed</text>
+
+  <text x="427" y="160" class="section">B · ASSEMBLE THE SCENARIO</text>
+  <g filter="url(#shadow)"><rect x="425" y="185" width="410" height="410" rx="20" fill="#fff" stroke="#e0a153" stroke-width="2.5"/></g>
+  <text x="455" y="228" class="head">Scenario object</text>
+  <text x="455" y="265" class="body">scenario_id and scenario_year</text><text x="455" y="299" class="body">method and stochastic controls</text><text x="455" y="333" class="body">closures and selectivity rules</text><text x="455" y="367" class="body">cessation CFR list</text><text x="455" y="401" class="body">compensation mechanisms</text>
+  <line x1="455" y1="427" x2="805" y2="427" stroke="#e7edf0" stroke-width="2"/>
+  <text x="455" y="461" class="small">Wildcard semantics</text><text x="455" y="488" class="body">NULL = all cells / months / gears / vessels</text>
+  <text x="455" y="530" class="small">Formal validation</text><text x="455" y="557" class="body">IDs, ranges, associations and parameters</text>
+
+  <g filter="url(#shadow)"><rect x="425" y="625" width="410" height="170" rx="18" fill="#fff7e7" stroke="#e3a357" stroke-width="2"/></g>
+  <text x="455" y="665" class="head">Compensation mechanism (CM)</text>
+  <text x="455" y="700" class="formula">D<tspan baseline-shift="sub" font-size="12">scenario</tspan> = D<tspan baseline-shift="sub" font-size="12">reference</tspan> + D<tspan baseline-shift="sub" font-size="12">CM</tspan></text>
+  <text x="455" y="735" class="body">Eligibility: CFR, gear, harbour and LOA</text>
+  <text x="455" y="767" class="warn">CM must reference a measure in the same scenario</text>
+
+  <text x="900" y="160" class="section">C · TRANSLATE RULES INTO SIMULATION INPUTS</text>
+  <g filter="url(#shadow)">
+    <rect x="900" y="185" width="485" height="125" rx="16" fill="#fff" stroke="#62b5b0" stroke-width="2"/>
+    <rect x="900" y="335" width="485" height="155" rx="16" fill="#fff" stroke="#62b5b0" stroke-width="2"/>
+    <rect x="900" y="515" width="485" height="125" rx="16" fill="#fff" stroke="#62b5b0" stroke-width="2"/>
+    <rect x="900" y="665" width="485" height="130" rx="16" fill="#fff" stroke="#62b5b0" stroke-width="2"/>
+  </g>
+  <text x="930" y="222" class="head">1. Retain the future fleet</text><text x="930" y="254" class="body">Remove cessation CFRs; preserve zero outcomes</text><text x="930" y="280" class="small">for comparison with the reference fleet</text>
+  <text x="930" y="372" class="head">2. Allocate annual days by month</text><text x="930" y="404" class="body">Use open, historically active months</text><text x="930" y="433" class="body">No user-supplied monthly quotas</text><rect x="930" y="449" width="260" height="27" rx="13" fill="#e3f4f2"/><text x="1060" y="468" text-anchor="middle" class="small">each month ≤ max_days_per_month</text>
+  <text x="930" y="552" class="head">3. Build candidate grounds</text><text x="930" y="584" class="body">Filter closed and unreachable cells</text><text x="930" y="610" class="small">retain gear–métier composition and peer support</text>
+  <text x="930" y="702" class="head">4. Prepare scenario values</text><text x="930" y="734" class="body">LPUE × selectivity multiplier</text><text x="930" y="763" class="body">price × scenario multiplier; other GVL fixed</text>
+
+  <g stroke="#526b79" stroke-width="3" fill="none" marker-end="url(#arrow)">
+    <path d="M362 245 H418"/><path d="M362 385 H418"/><path d="M362 525 H418"/><path d="M362 665 H418"/>
+    <path d="M837 390 H892"/><path d="M837 710 H892"/>
+    <path d="M1142 311 V328"/><path d="M1142 491 V508"/><path d="M1142 641 V658"/>
+  </g>
+  <rect x="55" y="830" width="1330" height="42" rx="12" fill="#e9f2f6"/><text x="720" y="857" text-anchor="middle" class="body">Result: one explicit set of vessels, days, open cells, LPUE values and economic parameters for each scenario year.</text>
+</svg>

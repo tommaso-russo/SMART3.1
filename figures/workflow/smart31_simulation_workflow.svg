@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="800" viewBox="0 0 1440 800" role="img" aria-labelledby="title desc">
+  <title id="title">SMART3.1 simulation workflow</title>
+  <desc id="desc">From the validated Step 1 bundle to a representative future baseline, scenario preparation, feasibility checks, vessel-month optimisation and auditable outputs.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" x2="1">
+      <stop offset="0" stop-color="#073b5c"/>
+      <stop offset="1" stop-color="#087f8c"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#0b2638" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4c6675"/>
+    </marker>
+    <style>
+      .title{font:700 34px Arial,sans-serif;fill:#fff}.subtitle{font:400 18px Arial,sans-serif;fill:#d8f1f3}
+      .step{font:700 14px Arial,sans-serif;letter-spacing:1.5px;fill:#087f8c}.head{font:700 23px Arial,sans-serif;fill:#123247}
+      .body{font:400 16px Arial,sans-serif;fill:#294a5d}.small{font:400 14px Arial,sans-serif;fill:#4c6675}
+      .railhead{font:700 17px Arial,sans-serif;fill:#8a3c0d}.rail{font:400 15px Arial,sans-serif;fill:#67331b}
+    </style>
+  </defs>
+  <rect width="1440" height="800" fill="#f5f9fb"/>
+  <rect x="0" y="0" width="1440" height="120" fill="url(#header)"/>
+  <text x="54" y="54" class="title">SMART3.1 — end-to-end simulation procedure</text>
+  <text x="54" y="88" class="subtitle">Observed evidence becomes one future year; each vessel-month is reallocated under management and physical constraints.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="40" y="170" width="205" height="410" rx="18" fill="#fff" stroke="#78a9c4" stroke-width="2"/>
+    <rect x="270" y="170" width="205" height="410" rx="18" fill="#fff" stroke="#62b5b0" stroke-width="2"/>
+    <rect x="500" y="170" width="205" height="410" rx="18" fill="#fff" stroke="#e3a357" stroke-width="2"/>
+    <rect x="730" y="170" width="205" height="410" rx="18" fill="#fff" stroke="#d87a63" stroke-width="2"/>
+    <rect x="960" y="170" width="205" height="410" rx="18" fill="#fff" stroke="#7c8fd0" stroke-width="2"/>
+    <rect x="1190" y="170" width="205" height="410" rx="18" fill="#fff" stroke="#57a67a" stroke-width="2"/>
+  </g>
+
+  <g>
+    <circle cx="72" cy="204" r="18" fill="#1e6d94"/><text x="72" y="210" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#fff">1</text>
+    <text x="98" y="209" class="step">VALIDATE</text>
+    <text x="62" y="255" class="head">Step 1 bundle</text>
+    <line x1="62" y1="272" x2="223" y2="272" stroke="#dce8ee"/>
+    <text x="62" y="310" class="body">Historical years</text><text x="62" y="333" class="small">for example 2020–2025</text>
+    <text x="62" y="378" class="body">Grid and water routes</text>
+    <text x="62" y="421" class="body">Fleet, trips and effort</text>
+    <text x="62" y="464" class="body">LPUE and prices</text>
+    <text x="62" y="507" class="body">Time and economics</text>
+    <rect x="62" y="532" width="155" height="28" rx="14" fill="#e5f1f7"/><text x="139" y="551" text-anchor="middle" class="small">version + checksum</text>
+  </g>
+
+  <g>
+    <circle cx="302" cy="204" r="18" fill="#168b83"/><text x="302" y="210" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#fff">2</text>
+    <text x="328" y="209" class="step">AGGREGATE</text>
+    <text x="292" y="255" class="head">Future baseline</text>
+    <line x1="292" y1="272" x2="453" y2="272" stroke="#dce8ee"/>
+    <text x="292" y="310" class="body">Active fleet</text><text x="292" y="333" class="small">present in latest year</text>
+    <text x="292" y="378" class="body">Equal-year means</text><text x="292" y="401" class="small">zeros since vessel entry</text>
+    <text x="292" y="446" class="body">Decision unit</text>
+    <rect x="292" y="465" width="160" height="42" rx="9" fill="#e3f4f2"/><text x="372" y="492" text-anchor="middle" font-family="Arial" font-weight="700" font-size="18" fill="#116b67">CFR × MONTH</text>
+    <text x="292" y="541" class="small">2026; optional 2027 if</text><text x="292" y="561" class="small">management rules differ</text>
+  </g>
+
+  <g>
+    <circle cx="532" cy="204" r="18" fill="#d7862e"/><text x="532" y="210" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#fff">3</text>
+    <text x="558" y="209" class="step">CONFIGURE</text>
+    <text x="522" y="255" class="head">Scenario rules</text>
+    <line x1="522" y1="272" x2="683" y2="272" stroke="#dce8ee"/>
+    <text x="522" y="313" class="body">Spatial closures</text>
+    <text x="522" y="356" class="body">Temporal closures</text>
+    <text x="522" y="399" class="body">LPUE selectivity</text>
+    <text x="522" y="442" class="body">Permanent cessation</text>
+    <text x="522" y="485" class="body">Compensation days</text>
+    <rect x="522" y="515" width="160" height="45" rx="9" fill="#fff1df"/><text x="602" y="535" text-anchor="middle" class="small">CM must reference</text><text x="602" y="553" text-anchor="middle" class="small">another measure</text>
+  </g>
+
+  <g>
+    <circle cx="762" cy="204" r="18" fill="#c55d47"/><text x="762" y="210" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#fff">4</text>
+    <text x="788" y="209" class="step">CHECK</text>
+    <text x="752" y="255" class="head">Feasibility</text>
+    <line x1="752" y1="272" x2="913" y2="272" stroke="#dce8ee"/>
+    <text x="752" y="313" class="body">Open candidate cells</text>
+    <text x="752" y="356" class="body">Reachable by water</text>
+    <text x="752" y="399" class="body">≤ 25 days / month</text>
+    <text x="752" y="442" class="body">≤ 24 hours / sea day</text>
+    <text x="752" y="485" class="body">Global crowding cap</text>
+    <rect x="752" y="515" width="160" height="45" rx="9" fill="#fbe8e4"/><text x="832" y="535" text-anchor="middle" class="small">repair crowding before</text><text x="832" y="553" text-anchor="middle" class="small">optimising GVA</text>
+  </g>
+
+  <g>
+    <circle cx="992" cy="204" r="18" fill="#6176bd"/><text x="992" y="210" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#fff">5</text>
+    <text x="1018" y="209" class="step">SEARCH</text>
+    <text x="982" y="255" class="head">Optimisation</text>
+    <line x1="982" y1="272" x2="1143" y2="272" stroke="#dce8ee"/>
+    <rect x="982" y="302" width="160" height="64" rx="10" fill="#eef0fa"/><text x="1062" y="328" text-anchor="middle" class="body">Bayesian</text><text x="1062" y="351" text-anchor="middle" class="small">Dirichlet posterior</text>
+    <text x="1062" y="394" text-anchor="middle" font-family="Arial" font-weight="700" font-size="15" fill="#6176bd">OR / BOTH</text>
+    <rect x="982" y="416" width="160" height="64" rx="10" fill="#eef0fa"/><text x="1062" y="442" text-anchor="middle" class="body">Stochastic</text><text x="1062" y="465" text-anchor="middle" class="small">adaptive proposals</text>
+    <text x="982" y="520" class="small">accept only robust</text><text x="982" y="542" class="small">vessel-month GVA gains</text>
+  </g>
+
+  <g>
+    <circle cx="1222" cy="204" r="18" fill="#31845a"/><text x="1222" y="210" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#fff">6</text>
+    <text x="1248" y="209" class="step">EXPORT</text>
+    <text x="1212" y="255" class="head">Auditable output</text>
+    <line x1="1212" y1="272" x2="1373" y2="272" stroke="#dce8ee"/>
+    <text x="1212" y="313" class="body">Run status</text>
+    <text x="1212" y="356" class="body">Spatial activity</text>
+    <text x="1212" y="399" class="body">Catch and removals</text>
+    <text x="1212" y="442" class="body">Monthly economics</text>
+    <text x="1212" y="485" class="body">Annual economics</text>
+    <text x="1212" y="528" class="body">Convergence logs</text>
+    <text x="1212" y="555" class="small">RDS + CSV summaries</text>
+  </g>
+
+  <g stroke="#4c6675" stroke-width="3" fill="none" marker-end="url(#arrow)">
+    <path d="M246 375 H263"/><path d="M476 375 H493"/><path d="M706 375 H723"/><path d="M936 375 H953"/><path d="M1166 375 H1183"/>
+  </g>
+
+  <rect x="40" y="630" width="1355" height="112" rx="18" fill="#fff7ec" stroke="#e7b87e" stroke-width="2"/>
+  <text x="70" y="668" class="railhead">Fail-fast safeguard</text>
+  <text x="70" y="699" class="rail">If days cannot be allocated, routes are unreachable, the clock is exceeded, crowding cannot be repaired, or economics are incomplete, the run is labelled infeasible.</text>
+  <text x="70" y="725" class="rail">SMART3.1 does not silently truncate fishing days, invent effort, or impute economic outcomes to make a scenario pass.</text>
+</svg>

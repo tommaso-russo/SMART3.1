@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="940" viewBox="0 0 1440 940" role="img" aria-labelledby="title desc">
+  <title id="title">SMART3.1 vessel-month optimisation loop</title>
+  <desc id="desc">Bayesian and stochastic proposals are evaluated for physical feasibility, production, economics and crowding before a robust GVA improvement is accepted.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" x2="1"><stop offset="0" stop-color="#073b5c"/><stop offset="1" stop-color="#087f8c"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0b2638" flood-opacity="0.13"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#526b79"/></marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#31845a"/></marker>
+    <style>
+      .title{font:700 34px Arial,sans-serif;fill:#fff}.subtitle{font:400 18px Arial,sans-serif;fill:#d8f1f3}.section{font:700 15px Arial,sans-serif;letter-spacing:1.4px;fill:#087f8c}
+      .head{font:700 21px Arial,sans-serif;fill:#123247}.body{font:400 16px Arial,sans-serif;fill:#294a5d}.small{font:400 14px Arial,sans-serif;fill:#4c6675}
+      .formula{font:700 16px Arial,sans-serif;fill:#17526a}.yes{font:700 15px Arial,sans-serif;fill:#27704b}.no{font:700 15px Arial,sans-serif;fill:#a24c3f}
+    </style>
+  </defs>
+  <rect width="1440" height="940" fill="#f5f9fb"/><rect width="1440" height="120" fill="url(#header)"/>
+  <text x="54" y="54" class="title">Monthly optimisation at the level of the individual vessel</text>
+  <text x="54" y="88" class="subtitle">The search changes spatial allocation, while scenario days and the vessel’s gear–métier composition remain controlled by the prepared context.</text>
+
+  <text x="55" y="160" class="section">ONE DECISION UNIT</text>
+  <g filter="url(#shadow)"><rect x="55" y="185" width="300" height="175" rx="18" fill="#fff" stroke="#4d98bd" stroke-width="2"/></g>
+  <text x="82" y="225" class="head">CFR × MONTH</text>
+  <text x="82" y="258" class="body">scenario fishing days</text><text x="82" y="286" class="body">gear–métier patterns</text><text x="82" y="314" class="body">open candidate cells</text>
+  <rect x="82" y="329" width="246" height="23" rx="11" fill="#e5f1f7"/><text x="205" y="346" text-anchor="middle" class="small">historical and peer spatial evidence</text>
+
+  <text x="410" y="160" class="section">PROPOSE A SPATIAL ALLOCATION</text>
+  <g filter="url(#shadow)"><rect x="410" y="185" width="420" height="175" rx="18" fill="#fff" stroke="#7c8fd0" stroke-width="2"/></g>
+  <rect x="435" y="215" width="170" height="112" rx="13" fill="#eef0fa"/><text x="520" y="246" text-anchor="middle" class="head">Bayesian</text><text x="520" y="276" text-anchor="middle" class="small">trip evidence +</text><text x="520" y="299" text-anchor="middle" class="small">peer prior → Dirichlet</text>
+  <rect x="635" y="215" width="170" height="112" rx="13" fill="#eef0fa"/><text x="720" y="246" text-anchor="middle" class="head">Stochastic</text><text x="720" y="276" text-anchor="middle" class="small">current solution +</text><text x="720" y="299" text-anchor="middle" class="small">peer exploration</text>
+  <text x="620" y="346" text-anchor="middle" class="formula">probabilities → multinomial trip allocation</text>
+
+  <text x="885" y="160" class="section">EVALUATE THE CANDIDATE</text>
+  <g filter="url(#shadow)">
+    <rect x="885" y="185" width="500" height="140" rx="16" fill="#fff" stroke="#d87a63" stroke-width="2"/>
+    <rect x="885" y="345" width="500" height="125" rx="16" fill="#fff" stroke="#d7862e" stroke-width="2"/>
+    <rect x="885" y="490" width="500" height="140" rx="16" fill="#fff" stroke="#31845a" stroke-width="2"/>
+    <rect x="885" y="650" width="500" height="105" rx="16" fill="#fff" stroke="#7c8fd0" stroke-width="2"/>
+  </g>
+  <text x="915" y="220" class="head">1. Physical time</text><text x="915" y="250" class="body">water distance → round-trip steaming time</text><text x="915" y="278" class="formula">S* = 2 N d̄ / v</text><text x="1120" y="278" class="formula">F* ≤ 24D − S*</text><text x="915" y="305" class="small">reject if steaming alone exceeds the vessel-month clock</text>
+  <text x="915" y="380" class="head">2. Production and value</text><text x="915" y="410" class="formula">catch = effort × LPUE × selectivity multiplier</text><text x="915" y="440" class="body">six-species value + fixed non-modelled-species value</text>
+  <text x="915" y="525" class="head">3. Economics</text><text x="915" y="555" class="formula">GVL = GVL<tspan baseline-shift="sub" font-size="11">6sp</tspan> + GVL<tspan baseline-shift="sub" font-size="11">other,ref</tspan></text><text x="915" y="584" class="formula">GVA = GVL − EC − OC</text><text x="1130" y="584" class="formula">GP = GVA − LC</text><text x="915" y="612" class="small">physical fuel where supported; explicit EC-share fallback otherwise</text>
+  <text x="915" y="686" class="head">4. Fleet-wide crowding</text><text x="915" y="718" class="body">every cell-month effort ≤ global historical cap × factor</text>
+
+  <g stroke="#526b79" stroke-width="3" fill="none" marker-end="url(#arrow)"><path d="M357 273 H402"/><path d="M832 273 H877"/><path d="M1135 326 V338"/><path d="M1135 471 V483"/><path d="M1135 631 V643"/></g>
+
+  <g filter="url(#shadow)"><path d="M655 455 L815 555 L655 655 L495 555 Z" fill="#fff" stroke="#dfaa58" stroke-width="2.5"/></g>
+  <text x="655" y="525" text-anchor="middle" class="head">Admissible and</text><text x="655" y="554" text-anchor="middle" class="head">GVA above the</text><text x="655" y="583" text-anchor="middle" class="head">robust threshold?</text>
+  <text x="655" y="620" text-anchor="middle" class="small">new &gt; current + (factor − 1)|current|</text>
+  <path d="M883 702 H833 Q810 702 798 680 L760 626" fill="none" stroke="#526b79" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <g filter="url(#shadow)"><rect x="55" y="455" width="310" height="115" rx="16" fill="#e8f5ed" stroke="#57a67a" stroke-width="2"/></g>
+  <text x="82" y="492" class="head">Accept update</text><text x="82" y="523" class="body">replace the vessel-month state</text><text x="82" y="550" class="small">reset its non-improvement counter</text>
+  <path d="M493 555 H373" fill="none" stroke="#31845a" stroke-width="3" marker-end="url(#arrowGreen)"/><text x="420" y="543" class="yes">YES</text>
+
+  <g filter="url(#shadow)"><rect x="55" y="610" width="310" height="115" rx="16" fill="#fbeae6" stroke="#d87a63" stroke-width="2"/></g>
+  <text x="82" y="647" class="head">Reject candidate</text><text x="82" y="678" class="body">keep the current allocation</text><text x="82" y="705" class="small">increase the stability counter</text>
+  <path d="M555 624 C485 684 442 675 373 670" fill="none" stroke="#a65a4c" stroke-width="3" marker-end="url(#arrow)"/><text x="470" y="651" class="no">NO</text>
+
+  <g stroke="#526b79" stroke-width="3" fill="none" marker-end="url(#arrow)">
+    <path d="M210 453 V370 Q210 385 225 385 H610 Q630 385 630 368"/>
+    <path d="M210 608 V590 Q210 585 230 585 H455"/>
+  </g>
+
+  <g filter="url(#shadow)"><rect x="55" y="785" width="1330" height="105" rx="18" fill="#e9f2f6" stroke="#8bb4c7" stroke-width="2"/></g>
+  <text x="82" y="822" class="head">Stop and export</text>
+  <text x="82" y="854" class="body">Stop after the configured sweeps or when every vessel-month reaches the maximum consecutive non-improvements.</text>
+  <text x="82" y="880" class="small">Export activity, catches, removals, monthly and annual economics, occupancy, stability, convergence, seeds and feasibility diagnostics.</text>
+  <path d="M210 727 V777" fill="none" stroke="#526b79" stroke-width="3" marker-end="url(#arrow)"/>
+</svg>

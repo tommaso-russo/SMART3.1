@@ -545,10 +545,6 @@ scenarios <- list(
 
 ## Running Step 2
 
-The main simulation notebook is:
-
-[`SMART3.1_Step2_Simulation_V2026_08_18_ILLUSTRATED_v1.Rmd`](SMART3.1_Step2_Simulation_V2026_08_18_ILLUSTRATED_v1.Rmd)
-
 ### Automatic bundle selection
 
 Place the Step 1 principal RDS in `outputs/step1_simulation_inputs/`, edit the `scenarios` list, and render the notebook. The most recently modified matching bundle is selected automatically.
@@ -684,8 +680,6 @@ An increase in fleet GVA can coexist with losses for individual vessels or incre
 
 ## Repository contents
 
-- [`SMART3.1_Step1_Set_Up_V2026_08_18_ILLUSTRATED_v6.1.Rmd`](SMART3.1_Step1_Set_Up_V2026_08_18_ILLUSTRATED_v6.1.Rmd) â€” current Step 1 research workflow.
-- [`SMART3.1_Step2_Simulation_V2026_08_18_ILLUSTRATED_v1.Rmd`](SMART3.1_Step2_Simulation_V2026_08_18_ILLUSTRATED_v1.Rmd) â€” vessel-month management scenario simulator.
 - [`figures/workflow/01_smart31_workflow_overview.png`](figures/workflow/01_smart31_workflow_overview.png) â€” conceptual overview of SMART3.1.
 - [`figures/workflow/02_effort_accessibility.png`](figures/workflow/02_effort_accessibility.png) â€” fishing effort and water-constrained accessibility.
 - [`figures/workflow/03_lpue_mass_balance.png`](figures/workflow/03_lpue_mass_balance.png) â€” mass-conserving LPUE reconstruction.

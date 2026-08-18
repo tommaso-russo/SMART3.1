@@ -44,21 +44,21 @@ SMART was originally developed as a spatially explicit bio-economic model for de
 
 The framework connects five dimensions:
 
-1. **Fishing activity** — vessel movements, fishing time, steaming, gear, fleet structure and access to fishing grounds.
-2. **Production** — calibrated landings, spatial LPUE and the origin-to-harbour flow of catches.
-3. **Population structure** — species distributions, habitat constraints and depth-dependent catch composition by age.
-4. **Fleet economics** — revenues, days at sea, fuel consumption, operating costs and profitability.
-5. **Management response** — vessel-level effort reallocation under spatial, temporal, selectivity and capacity measures.
+1. **Fishing activity** â€” vessel movements, fishing time, steaming, gear, fleet structure and access to fishing grounds.
+2. **Production** â€” calibrated landings, spatial LPUE and the origin-to-harbour flow of catches.
+3. **Population structure** â€” species distributions, habitat constraints and depth-dependent catch composition by age.
+4. **Fleet economics** â€” revenues, days at sea, fuel consumption, operating costs and profitability.
+5. **Management response** â€” vessel-level effort reallocation under spatial, temporal, selectivity and capacity measures.
 
 SMART3.1 is a **decision-support and Management Strategy Evaluation framework**, not a replacement for stock assessment. The current Step 2 simulator reallocates activity against a representative LPUE and price baseline. It reports scenario catches and biological removals, but it does not project stock dynamics from one future year to the next.
 
 ## Two-stage architecture
 
-### Step 1 — set up and validation
+### Step 1 â€” set up and validation
 
 Step 1 harmonises the observed evidence, reconstructs the spatial biological and economic state, validates all required identities and exports a self-contained simulation bundle.
 
-### Step 2 — scenario simulation
+### Step 2 â€” scenario simulation
 
 Step 2 reads the validated bundle, constructs one representative future year and optimises the spatial activity of each vessel-month. The simulator can run 2026 and, when rules differ, an additional scenario for 2027. A scenario year selects a management rule set; it is not a population projection step.
 
@@ -68,7 +68,7 @@ $$
 u = CFR \times MONTH.
 $$
 
-`YEAR` is deliberately excluded from the optimisation. Historical years, for example 2020–2025, provide evidence for the representative future state. Gear, métier, grid cell and biological area remain within the physical, production and economic calculations.
+`YEAR` is deliberately excluded from the optimisation. Historical years, for example 2020â€“2025, provide evidence for the representative future state. Gear, mÃ©tier, grid cell and biological area remain within the physical, production and economic calculations.
 
 <p align="center">
   <img src="figures/workflow/smart31_simulation_workflow.svg"
@@ -137,7 +137,7 @@ Spatial measures can therefore affect juveniles, adults and spawning biomass dif
 
 ### 5. Assemble the vessel-level bio-economic state
 
-The activity model connects vessels, months, gears, métiers, fishing grounds, harbours, effort, production and prices. Economic calculations occur once per activity before species or age expansion, avoiding duplicated costs.
+The activity model connects vessels, months, gears, mÃ©tiers, fishing grounds, harbours, effort, production and prices. Economic calculations occur once per activity before species or age expansion, avoiding duplicated costs.
 
 Total gross value of landings is separated into a scenario-sensitive modelled-species component and a reference residual for other species:
 
@@ -169,7 +169,7 @@ Principal inputs include:
 | `grid_sf`, `grid_gsa_lookup` | Grid geometry and biological/economic area assignment |
 | `df_harbs_grid_dists` | Water-constrained harbour-to-cell distances |
 | `final_fleet`, `annual_trips` | Active fleet, entry years and trip evidence |
-| `IBM_effort` | Vessel-month-gear-métier-cell activity history |
+| `IBM_effort` | Vessel-month-gear-mÃ©tier-cell activity history |
 | `df_lpue_rates_mass_conserving` | Historical spatial LPUE |
 | `price_annual` | Annual price by species and GSA |
 | `economic_activity_baseline` | Days, trips, fishing, steaming and fuel parameters |
@@ -190,7 +190,7 @@ Step 2 asks the following operational question:
        alt="Bio-economic Management Strategy Evaluation loop">
 </p>
 
-The optimiser changes the **spatial allocation** of fishing activity. Scenario days are prepared before optimisation, and the vessel’s reference gear-métier composition is retained. This preserves an interpretable behavioural unit while allowing catches, travel time, fuel use and profitability to respond to displaced fishing.
+The optimiser changes the **spatial allocation** of fishing activity. Scenario days are prepared before optimisation, and the vesselâ€™s reference gear-mÃ©tier composition is retained. This preserves an interpretable behavioural unit while allowing catches, travel time, fuel use and profitability to respond to displaced fishing.
 
 The search is stochastic and constrained. It should be interpreted as a reproducible search for improved feasible solutions, not as proof of a unique global mathematical optimum. Multiple replicates and comparison of the two engines are therefore recommended for substantive scenario evaluation.
 
@@ -225,7 +225,7 @@ Historical years are collapsed before optimisation:
 - absent rows in the sparse LPUE table represent zero allocated LPUE;
 - records labelled `historical_spatial_non_vms_proxy` are excluded from future LPUE;
 - price becomes the equal-year mean by species and GSA;
-- the decision table is reduced to `CFR × MONTH`, while gear, métier and cell detail is retained underneath it.
+- the decision table is reduced to `CFR Ã— MONTH`, while gear, mÃ©tier and cell detail is retained underneath it.
 
 The resulting state represents one repeatable future year. Separate 2026 and 2027 scenario objects may use the same baseline when management rules differ between years.
 
@@ -278,15 +278,15 @@ The annual non-modelled-species value is distributed among scenario months accor
 
 ### 7. Build open and reachable candidate grounds
 
-Candidate cells are obtained from the vessel’s historical grounds and the spatial behaviour of comparable vessels. The peer hierarchy is:
+Candidate cells are obtained from the vesselâ€™s historical grounds and the spatial behaviour of comparable vessels. The peer hierarchy is:
 
-1. same harbour, month, gear and métier;
+1. same harbour, month, gear and mÃ©tier;
 2. same harbour, month and gear;
 3. own history only when peer support is unavailable.
 
-Closed cells are removed. Candidate grounds must also have a finite water-constrained route from the vessel’s harbour. A vessel-month-gear-métier pattern with no reachable open cell makes the scenario infeasible.
+Closed cells are removed. Candidate grounds must also have a finite water-constrained route from the vesselâ€™s harbour. A vessel-month-gear-mÃ©tier pattern with no reachable open cell makes the scenario infeasible.
 
-Gear and métier proportions are retained from the reference vessel-month. The optimiser redistributes their cell shares rather than allowing an unconstrained switch of fishing technique.
+Gear and mÃ©tier proportions are retained from the reference vessel-month. The optimiser redistributes their cell shares rather than allowing an unconstrained switch of fishing technique.
 
 ### 8. Prepare the spatial probability models
 
@@ -297,7 +297,7 @@ $$
 =n^{trip}_{v,m,a,c}+\alpha_0 q_{h,m,a,c},
 $$
 
-where $a$ denotes the gear-métier pattern, $c$ the candidate cell, $n^{trip}$ the effective historical trip evidence and $q$ the peer spatial distribution.
+where $a$ denotes the gear-mÃ©tier pattern, $c$ the candidate cell, $n^{trip}$ the effective historical trip evidence and $q$ the peer spatial distribution.
 
 The stochastic optimiser instead centres proposals on a mixture of the current solution and the peer distribution. Both engines convert sampled probabilities to discrete cell allocations through a multinomial trip draw, allowing historically unused but supported cells to receive zero or positive activity in a particular proposal.
 
@@ -328,7 +328,7 @@ For every proposed spatial allocation, SMART3.1 recalculates physical activity, 
 For a vessel-month-gear with $N$ trips, mean water distance $\bar d$ and steaming speed $v$:
 
 $$
-S^*=\frac{2N\bar d}{v}.
+S^{*}=\frac{2N\bar d}{v}.
 $$
 
 Available time is bounded by sea days:
@@ -340,13 +340,13 @@ $$
 Fishing time responds to the change in steaming through the configured elasticity $\varepsilon$ and is capped by the remaining physical clock:
 
 $$
-F^*=\min\left[
-\max\left(0,F^{ref}-\varepsilon(S^*-S^{ref})\right),
-\max\left(0,24D-S^*\right)
+F^{*}=\min\left[
+\max\left(0,F^{ref}-\varepsilon(S^{*}-S^{ref})\right),
+\max\left(0,24D-S^{*}\right)
 \right].
 $$
 
-If steaming alone exceeds `maximum_clock_hours_per_sea_day × days_scenario_gear`, the candidate is rejected.
+If steaming alone exceeds `maximum_clock_hours_per_sea_day Ã— days_scenario_gear`, the candidate is rejected.
 
 #### Production and prices
 
@@ -366,7 +366,7 @@ The scenario-sensitive value for modelled species is catch multiplied by the fut
 For gears with valid fishing and steaming fuel rates:
 
 $$
-FC=q^{fish}F^*+q^{steam}S^*,
+FC=q^{fish}F^{*}+q^{steam}S^{*},
 \qquad EC=FC\times P^{fuel}.
 $$
 
@@ -405,7 +405,7 @@ $$
 
 with an additional absolute tolerance near zero. The user controls `min_GVA_improve_fact`; the default is 1.05. The absolute-value formulation also defines a genuine improvement when current GVA is negative.
 
-The search visits vessel-month units in random order. An accepted update resets that unit’s stability counter. A rejected update increases it. The run stops when:
+The search visits vessel-month units in random order. An accepted update resets that unitâ€™s stability counter. A rejected update increases it. The run stops when:
 
 - every vessel-month reaches `max_consecutive_non_improvements`; or
 - `maximum_sweeps` is reached.
@@ -615,7 +615,7 @@ The rendered report prints the run-status and economic tables and includes plots
 A run is labelled infeasible when, for example:
 
 - annual days cannot be distributed across open historical months without exceeding `max_days_per_month`;
-- an active gear-métier pattern has no reachable open cell;
+- an active gear-mÃ©tier pattern has no reachable open cell;
 - steaming exceeds the vessel-month physical clock;
 - the initial state is physically or economically invalid;
 - no state satisfying the global crowding cap is found;
@@ -643,7 +643,7 @@ An increase in fleet GVA can coexist with losses for individual vessels or incre
 ### Important modelling boundaries
 
 - The future baseline is stationary; Step 2 does not update biomass between 2026 and 2027.
-- The optimiser searches vessel-month spatial allocations and does not freely replace gear or métier.
+- The optimiser searches vessel-month spatial allocations and does not freely replace gear or mÃ©tier.
 - The crowding limit is a global maximum independent of the identity of the cell.
 - CM adds fishing days but does not automatically increase the fixed other-species annual GVL.
 - Selectivity is implemented through an LPUE multiplier; the baseline LPUE object is preserved.
@@ -657,47 +657,47 @@ An increase in fleet GVA can coexist with losses for individual vessels or incre
 |---|---|---|
 | `simulation_bundle` | Validated Step 1 hand-off with manifest and checksums | Run level |
 | `active_fleet` | Vessels present in the latest historical year | Vessel |
-| `activity_reference` | Representative spatial activity | Vessel × month × gear × métier × cell |
-| `time_reference` | Representative days, trips, fishing and steaming | Vessel × month × gear |
-| `lpue_reference` | Equal-year future LPUE | Month × GSA × gear × species × cell |
-| `price_reference` | Equal-year future prices | Species × GSA |
-| `peer_prior` | Comparable-vessel spatial distribution | Harbour × month × gear × métier × cell |
+| `activity_reference` | Representative spatial activity | Vessel Ã— month Ã— gear Ã— mÃ©tier Ã— cell |
+| `time_reference` | Representative days, trips, fishing and steaming | Vessel Ã— month Ã— gear |
+| `lpue_reference` | Equal-year future LPUE | Month Ã— GSA Ã— gear Ã— species Ã— cell |
+| `price_reference` | Equal-year future prices | Species Ã— GSA |
+| `peer_prior` | Comparable-vessel spatial distribution | Harbour Ã— month Ã— gear Ã— mÃ©tier Ã— cell |
 | `scenario` | Measures, year, engine and parameters | Scenario level |
 | `scenario_context` | Eligible fleet, days, candidates, values and constraints | Scenario level |
-| `state_by_unit` | Candidate spatial shares | Vessel × month × gear × métier × cell |
-| `economic_monthly` | Scenario and reference vessel economics | Vessel × month |
-| `economic_annual` | Annual vessel economics and deltas | Vessel × scenario year |
-| `run_status` | Feasibility, convergence and failure stage | Scenario × method × replicate |
+| `state_by_unit` | Candidate spatial shares | Vessel Ã— month Ã— gear Ã— mÃ©tier Ã— cell |
+| `economic_monthly` | Scenario and reference vessel economics | Vessel Ã— month |
+| `economic_annual` | Annual vessel economics and deltas | Vessel Ã— scenario year |
+| `run_status` | Feasibility, convergence and failure stage | Scenario Ã— method Ã— replicate |
 
 ## Design principles
 
-- **Spatially explicit by construction** — grid cell and GSA remain part of analytical keys.
-- **Mass conserving at setup** — calibrated catch is reconciled against Step 1 spatial production.
-- **Non-negative** — LPUE, effort and production cannot become negative through fitting or simulation.
-- **Age aware** — Step 1 can reconstruct depth-dependent catch composition by age.
-- **Individual-based behaviour** — optimisation occurs at `CFR × MONTH`.
-- **Physically constrained** — water routes, steaming and fishing share an explicit clock.
-- **Economically coherent** — activity costs are evaluated once at the vessel-month-gear scale.
-- **Transparent stochasticity** — methods, replicates and seeds are retained in every result.
-- **Fail-fast validation** — infeasible scenarios are reported rather than silently modified.
-- **Auditable outputs** — versions, manifests, checksums, parameters and diagnostics accompany results.
+- **Spatially explicit by construction** â€” grid cell and GSA remain part of analytical keys.
+- **Mass conserving at setup** â€” calibrated catch is reconciled against Step 1 spatial production.
+- **Non-negative** â€” LPUE, effort and production cannot become negative through fitting or simulation.
+- **Age aware** â€” Step 1 can reconstruct depth-dependent catch composition by age.
+- **Individual-based behaviour** â€” optimisation occurs at `CFR Ã— MONTH`.
+- **Physically constrained** â€” water routes, steaming and fishing share an explicit clock.
+- **Economically coherent** â€” activity costs are evaluated once at the vessel-month-gear scale.
+- **Transparent stochasticity** â€” methods, replicates and seeds are retained in every result.
+- **Fail-fast validation** â€” infeasible scenarios are reported rather than silently modified.
+- **Auditable outputs** â€” versions, manifests, checksums, parameters and diagnostics accompany results.
 
 ## Repository contents
 
-- [`SMART3.1_Step1_Set_Up_V2026_08_18_ILLUSTRATED_v6.1.Rmd`](SMART3.1_Step1_Set_Up_V2026_08_18_ILLUSTRATED_v6.1.Rmd) — current Step 1 research workflow.
-- [`SMART3.1_Step2_Simulation_V2026_08_18_ILLUSTRATED_v1.Rmd`](SMART3.1_Step2_Simulation_V2026_08_18_ILLUSTRATED_v1.Rmd) — vessel-month management scenario simulator.
-- [`figures/workflow/01_smart31_workflow_overview.png`](figures/workflow/01_smart31_workflow_overview.png) — conceptual overview of SMART3.1.
-- [`figures/workflow/02_effort_accessibility.png`](figures/workflow/02_effort_accessibility.png) — fishing effort and water-constrained accessibility.
-- [`figures/workflow/03_lpue_mass_balance.png`](figures/workflow/03_lpue_mass_balance.png) — mass-conserving LPUE reconstruction.
-- [`figures/workflow/04_age_depth_structure.png`](figures/workflow/04_age_depth_structure.png) — depth-dependent age structure.
-- [`figures/workflow/05_bioeconomic_mse_loop.png`](figures/workflow/05_bioeconomic_mse_loop.png) — bio-economic MSE loop.
-- [`figures/workflow/smart31_simulation_workflow.svg`](figures/workflow/smart31_simulation_workflow.svg) — end-to-end simulation diagram.
-- [`figures/workflow/smart31_scenario_preparation.svg`](figures/workflow/smart31_scenario_preparation.svg) — management-measure and scenario diagram.
-- [`figures/workflow/smart31_vessel_month_optimisation.svg`](figures/workflow/smart31_vessel_month_optimisation.svg) — optimisation loop diagram.
-- [`R/load_reference_data.R`](R/load_reference_data.R) — strict loader for standardised reference datasets.
-- [`data-raw/prepare_reference_data.R`](data-raw/prepare_reference_data.R) — reproducible conversion and validation of legacy inputs.
-- [`docs/reference-data/README.md`](docs/reference-data/README.md) — reference-data preparation workflow.
-- [`docs/reference-data/data_dictionary.csv`](docs/reference-data/data_dictionary.csv) — field definitions, units and key roles.
+- [`SMART3.1_Step1_Set_Up_V2026_08_18_ILLUSTRATED_v6.1.Rmd`](SMART3.1_Step1_Set_Up_V2026_08_18_ILLUSTRATED_v6.1.Rmd) â€” current Step 1 research workflow.
+- [`SMART3.1_Step2_Simulation_V2026_08_18_ILLUSTRATED_v1.Rmd`](SMART3.1_Step2_Simulation_V2026_08_18_ILLUSTRATED_v1.Rmd) â€” vessel-month management scenario simulator.
+- [`figures/workflow/01_smart31_workflow_overview.png`](figures/workflow/01_smart31_workflow_overview.png) â€” conceptual overview of SMART3.1.
+- [`figures/workflow/02_effort_accessibility.png`](figures/workflow/02_effort_accessibility.png) â€” fishing effort and water-constrained accessibility.
+- [`figures/workflow/03_lpue_mass_balance.png`](figures/workflow/03_lpue_mass_balance.png) â€” mass-conserving LPUE reconstruction.
+- [`figures/workflow/04_age_depth_structure.png`](figures/workflow/04_age_depth_structure.png) â€” depth-dependent age structure.
+- [`figures/workflow/05_bioeconomic_mse_loop.png`](figures/workflow/05_bioeconomic_mse_loop.png) â€” bio-economic MSE loop.
+- [`figures/workflow/smart31_simulation_workflow.svg`](figures/workflow/smart31_simulation_workflow.svg) â€” end-to-end simulation diagram.
+- [`figures/workflow/smart31_scenario_preparation.svg`](figures/workflow/smart31_scenario_preparation.svg) â€” management-measure and scenario diagram.
+- [`figures/workflow/smart31_vessel_month_optimisation.svg`](figures/workflow/smart31_vessel_month_optimisation.svg) â€” optimisation loop diagram.
+- [`R/load_reference_data.R`](R/load_reference_data.R) â€” strict loader for standardised reference datasets.
+- [`data-raw/prepare_reference_data.R`](data-raw/prepare_reference_data.R) â€” reproducible conversion and validation of legacy inputs.
+- [`docs/reference-data/README.md`](docs/reference-data/README.md) â€” reference-data preparation workflow.
+- [`docs/reference-data/data_dictionary.csv`](docs/reference-data/data_dictionary.csv) â€” field definitions, units and key roles.
 
 Raw fleet, vessel, price and provider-restricted economic data are not distributed automatically. Users are responsible for access rights, confidentiality, licences and case-study-specific validation.
 
@@ -773,7 +773,7 @@ SMART3.1 builds on the original SMART bio-economic framework, the integration of
 ### References
 
 - Russo, T. et al. (2014). **SMART: A Spatially Explicit Bio-Economic Model for Assessing and Managing Demersal Fisheries, with an Application to Italian Trawlers in the Strait of Sicily.** *PLoS ONE*, 9(1), e86222. [https://doi.org/10.1371/journal.pone.0086222](https://doi.org/10.1371/journal.pone.0086222)
-- Russo, T. et al. (2018). **A model combining landings and VMS data to estimate landings by fishing ground and harbor.** *Fisheries Research*, 199, 218–230. [https://doi.org/10.1016/j.fishres.2017.11.002](https://doi.org/10.1016/j.fishres.2017.11.002)
+- Russo, T. et al. (2018). **A model combining landings and VMS data to estimate landings by fishing ground and harbor.** *Fisheries Research*, 199, 218â€“230. [https://doi.org/10.1016/j.fishres.2017.11.002](https://doi.org/10.1016/j.fishres.2017.11.002)
 - Russo, T. et al. (2019). **Simulating the Effects of Alternative Management Measures of Trawl Fisheries in the Central Mediterranean Sea: Application of a Multi-Species Bio-economic Modeling Approach.** *Frontiers in Marine Science*, 6, 542. [https://doi.org/10.3389/fmars.2019.00542](https://doi.org/10.3389/fmars.2019.00542)
 - D'Andrea, L. et al. (2020). **smartR: An R package for spatial modelling of fisheries and scenario simulation of management strategies.** *Methods in Ecology and Evolution*. [https://doi.org/10.1111/2041-210X.13394](https://doi.org/10.1111/2041-210X.13394)
 - Sala, A. et al. (2022). **Energy audit and carbon footprint in trawl fisheries.** *Scientific Data*, 9, 428. [https://doi.org/10.1038/s41597-022-01478-0](https://doi.org/10.1038/s41597-022-01478-0)

@@ -542,17 +542,16 @@ The result is a catch-at-age representation consistent with the spatial and temp
 
 For stock $s$, age $a$ and representative period $p$, dead removals in numbers are linked to fishing mortality through the Baranov catch equation:
 
-$$
-C_{s,a,p}
-=
+```math
+C_{s,a,p} =
 N_{s,a,p}
 \frac{F_{s,a,p}}{F_{s,a,p}+M_{s,a,p}}
 \left[
 1-\exp\left(
 -\left(F_{s,a,p}+M_{s,a,p}\right)
 \right)
-\right].
-$$
+\right]
+```
 
 Step 3 numerically inverts this equation to obtain $F_{s,a,p}$, while retaining explicit diagnostics for invalid, incomplete or non-solvable inputs.
 
@@ -560,18 +559,17 @@ Step 3 numerically inverts this equation to obtain $F_{s,a,p}$, while retaining 
 
 Gear-specific fishing mortality is obtained by partitioning total fishing mortality according to the corresponding dead-removal shares:
 
-$$
-F_{s,a,g,p}
-=
+```math
+F_{s,a,g,p} =
 F_{s,a,p}
-\frac{C_{s,a,g,p}}{C_{s,a,p}}.
-$$
+\frac{C_{s,a,g,p}}{C_{s,a,p}}
+```
 
 A reconciliation check verifies that
 
-$$
-\sum_g F_{s,a,g,p}=F_{s,a,p}
-$$
+```math
+\sum_g F_{s,a,g,p} = F_{s,a,p}
+```
 
 within numerical tolerance. The workflow therefore provides both **total F at age** and **Partial F at age by gear**.
 

@@ -1,0 +1,1232 @@
+---
+title: "SMART3.1 — Economic reference audit"
+author: "SMART3.1"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+    self_contained: false
+params:
+  case_file: "config/case_study.R"
+---
+
+Use the selected case configuration. Numerical audit gates must pass before results are used downstream.
+
+```{r bootstrap, include=FALSE}
+source("R/workflow_config.R", local = TRUE)
+.smart31_case <- smart31_load_case(params$case_file)
+.smart31_years <- smart31_year_values(.smart31_case)
+cfg <- smart31_stage_config(.smart31_case, "economic_audit")
+smart31_preflight(.smart31_case, "economic_audit", cfg)
+knitr::opts_knit$set(root.dir = .smart31_case$project_root)
+```
+
+## Setup
+
+```{r economic_audit-01-setup, message=FALSE, warning=FALSE}
+
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(purrr); library(tibble)
+  library(ggplot2); library(scales); library(openxlsx); library(readr); library(knitr)
+})
+options(stringsAsFactors = FALSE)
+project_root <- normalizePath(cfg$project_root, mustWork = TRUE)
+setwd(project_root)
+out_dir <- file.path(project_root, cfg$output_directory)
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+stamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+`%||%` <- function(x,y) if (is.null(x)) y else x
+stop31 <- function(...) stop(paste0(...), call.=FALSE)
+code <- function(x){y<-toupper(trimws(as.character(x))); y[is.na(y)|!nzchar(y)]<-NA_character_; y}
+gsa <- function(x){y<-toupper(trimws(as.character(x))); y[is.na(y)|!nzchar(y)]<-NA_character_; z<-sub("^GSA[[:space:]_.-]*","",y); z<-sub("^([0-9]+)\\..*$","\\1",z); n<-suppressWarnings(as.integer(z)); o<-ifelse(is.na(n),y,ifelse(n<100,sprintf("GSA%02d",n),paste0("GSA",n))); o[is.na(y)]<-NA_character_; o}
+req <- function(x,nm,label){m<-setdiff(nm,names(x)); if(length(m)) stop31(label," missing: ",paste(m,collapse=", ")); invisible(TRUE)}
+pick <- function(x,cand,label){h<-cand[cand%in%names(x)]; if(!length(h)) stop31("Cannot identify ",label); h[[1]]}
+num <- function(x){y<-trimws(as.character(x)); y[y==""]<-NA_character_; suppressWarnings(as.numeric(y))}
+ratio <- function(a,b) ifelse(is.finite(a)&is.finite(b)&b!=0,a/b,NA_real_)
+rdiff <- function(new,old) ifelse(is.finite(new)&is.finite(old)&old!=0,(new-old)/old,NA_real_)
+wrate <- function(v,g){k<-is.finite(v)&is.finite(g)&g>0; if(!any(k)) NA_real_ else sum(v[k])/sum(g[k])}
+pvrate <- function(v,n){k<-is.finite(v)&is.finite(n)&n>0; if(!any(k)) NA_real_ else sum(v[k])/sum(n[k])}
+vcov <- function(v,n){k<-is.finite(n)&n>0; if(!any(k)) NA_real_ else sum(n[k&is.finite(v)])/sum(n[k])}
+resolve <- function(p){p<-path.expand(as.character(p)); cands<-unique(c(p,file.path(project_root,p),file.path(project_root,basename(p)),file.path(project_root,"InputData",basename(p)))); e<-cands[file.exists(cands)]; if(!length(e)) stop31("File not found: ",p); normalizePath(e[[1]],mustWork=TRUE)}
+one <- function(x,label){z<-unique(x[!is.na(x)]); if(length(z)!=1L) stop31(label," is not unique"); z[[1]]}
+pass_recon <- function(obs,rec,tol) is.finite(obs)&is.finite(rec)&abs(obs-rec)<=tol*pmax(1,abs(obs))
+```
+
+## Load Step 1 reference
+
+```{r economic_audit-02-step1}
+
+step1_path <- resolve(cfg$step1_bundle_file)
+s1 <- readRDS(step1_path)
+inputs <- s1$inputs %||% s1$objects
+if(is.null(inputs)||!is.list(inputs)) stop31("Invalid Step 1 bundle")
+md5_s1 <- unname(tools::md5sum(step1_path))
+if(nzchar(cfg$expected_step1_md5) && md5_s1 != cfg$expected_step1_md5) stop31("Step 1 MD5 mismatch")
+for(nm in c("economic_rate_table","vessel_other_gvl_reference","IBM.eco")) if(is.null(inputs[[nm]])) stop31("Missing Step 1 object: ",nm)
+
+cur_rate <- as_tibble(as.data.frame(inputs$economic_rate_table))
+other <- as_tibble(as.data.frame(inputs$vessel_other_gvl_reference))
+ibm_eco <- as_tibble(as.data.frame(inputs$IBM.eco))
+
+req(cur_rate,c("Gear","VL","reference_Gear","reference_VL_used","EC_share","OC_share","LC_share"),"economic_rate_table")
+req(other,c("CFR","Gear","VL","GVL_other_reference"),"vessel_other_gvl_reference")
+req(ibm_eco,c("CFR","Gear","EC_share","OC_share","LC_share"),"IBM.eco")
+
+cur_rate <- cur_rate |>
+  transmute(
+    Gear=code(Gear),
+    VL=code(VL),
+    reference_Gear=code(reference_Gear),
+    reference_VL_used=code(reference_VL_used),
+    segment_EC_share=as.numeric(EC_share),
+    segment_OC_share=as.numeric(OC_share),
+    segment_LC_share=as.numeric(LC_share)
+  ) |>
+  distinct()
+
+if(anyDuplicated(cur_rate[c("Gear","VL")])) stop31("economic_rate_table not unique by Gear-VL")
+
+step2_vessel_rates <- ibm_eco |>
+  transmute(
+    CFR=trimws(as.character(CFR)),
+    Gear=code(Gear),
+    step2_EC_share=as.numeric(EC_share),
+    step2_OC_share=as.numeric(OC_share),
+    step2_LC_share=as.numeric(LC_share)
+  ) |>
+  group_by(CFR,Gear) |>
+  summarise(
+    step2_EC_share=one(step2_EC_share,"IBM.eco EC_share"),
+    step2_OC_share=one(step2_OC_share,"IBM.eco OC_share"),
+    step2_LC_share=one(step2_LC_share,"IBM.eco LC_share"),
+    .groups="drop"
+  )
+
+if(anyDuplicated(step2_vessel_rates[c("CFR","Gear")])) stop31("IBM.eco rate table not unique by CFR-Gear")
+
+other <- other |>
+  transmute(
+    CFR=trimws(as.character(CFR)),
+    Gear=code(Gear),
+    VL=code(VL),
+    GVL_other_step1_reference=as.numeric(GVL_other_reference)
+  ) |>
+  group_by(CFR,Gear,VL) |>
+  summarise(
+    GVL_other_step1_reference=one(GVL_other_step1_reference,"GVL_other_reference"),
+    .groups="drop"
+  )
+
+if(anyDuplicated(other[c("CFR","Gear")])) stop31("vessel_other_gvl_reference not unique by CFR-Gear")
+
+cat(
+  "Step 1:",step1_path,
+  "\nMD5:",md5_s1,
+  "\nExact Step 2 CFR-Gear economic rates:",nrow(step2_vessel_rates),
+  "\n"
+)
+```
+
+## Economic reference rates
+
+```{r economic_audit-03-new-rates}
+
+new_path <- resolve(cfg$new_economic_file)
+x <- as_tibble(openxlsx::read.xlsx(new_path,sheet=1,detectDates=FALSE,colNames=TRUE)); names(x)<-trimws(names(x))
+yc<-pick(x,c("year","YEAR","Year"),"year"); gc<-pick(x,c("GSA","gsa"),"GSA"); tc<-pick(x,c("fishing_tech","fishing_technique","fishing_technique_code"),"technique"); vc<-pick(x,c("vessel_lenght","vessel_length","vessel_length_class"),"vessel length"); nc<-pick(x,c("variable_name","variable","indicator"),"variable"); xc<-pick(x,c("value","VALUE","Value"),"value")
+map <- tribble(~variable_name,~key,
+"Gross value of landings","GVL","Energy costs","EC","Repair and maintenance costs","REPAIR","Other variable costs","OVC","Other non-variable costs","ONVC","Personnel costs","PERSONNEL","Value of unpaid labour","UNPAID","Other income","OTHER_INCOME","N. of active vessels","N_VESSELS","FTE","FTE","Engaged crew","ENGAGED_CREW")
+long <- x |> transmute(YEAR=as.integer(as.character(.data[[yc]])),GSA=gsa(.data[[gc]]),fishing_tech=code(.data[[tc]]),VL=code(.data[[vc]]),variable_name=trimws(as.character(.data[[nc]])),raw=trimws(as.character(.data[[xc]])),value=if_else(toupper(trimws(as.character(.data[[xc]])))=="C",NA_real_,num(.data[[xc]]))) |> inner_join(map,by="variable_name",relationship="many-to-one")
+wide <- long |> select(YEAR,GSA,fishing_tech,VL,key,value) |> pivot_wider(names_from=key,values_from=value) |> mutate(OC=if_else(is.finite(REPAIR)&is.finite(OVC)&is.finite(ONVC),REPAIR+OVC+ONVC,NA_real_),LC=if_else(is.finite(PERSONNEL)&is.finite(UNPAID),PERSONNEL+UNPAID,NA_real_))
+build_rates <- function(z,label) z |> group_by(fishing_tech,VL) |> summarise(EC_share=wrate(EC,GVL),OC_share=wrate(OC,GVL),LC_share=wrate(LC,GVL),other_income_share=wrate(OTHER_INCOME,GVL),FTE_per_active_vessel=pvrate(FTE,N_VESSELS),engaged_crew_per_active_vessel=pvrate(ENGAGED_CREW,N_VESSELS),EC_coverage=vcov(EC,N_VESSELS),OC_coverage=vcov(OC,N_VESSELS),LC_coverage=vcov(LC,N_VESSELS),OI_coverage=vcov(OTHER_INCOME,N_VESSELS),FTE_coverage=vcov(FTE,N_VESSELS),crew_coverage=vcov(ENGAGED_CREW,N_VESSELS),.groups="drop") |> mutate(vintage=label)
+r_recent <- build_rates(filter(wide,YEAR>=cfg$recent_year_min,YEAR<=cfg$recent_year_max),paste0(cfg$recent_year_min,"-",cfg$recent_year_max))
+r_2024 <- build_rates(filter(wide,YEAR==cfg$benchmark_year),as.character(cfg$benchmark_year))
+recent <- cur_rate |> left_join(r_recent,by=c("reference_Gear"="fishing_tech","reference_VL_used"="VL"),relationship="many-to-one")
+rate24 <- cur_rate |> left_join(r_2024,by=c("reference_Gear"="fishing_tech","reference_VL_used"="VL"),relationship="many-to-one")
+need <- c("EC_share","OC_share","LC_share","other_income_share","FTE_per_active_vessel","engaged_crew_per_active_vessel")
+if(any(!is.finite(as.matrix(recent[need])))) {print(recent |> filter(if_any(all_of(need),~!is.finite(.x)))); stop31("Incomplete recent candidate rates")}
+smart31_kable(recent,digits=5,caption=smart31_report_label("Mapped current and candidate 2022-2024 rates"))
+
+rate24_mapping_audit <- rate24 |>
+  transmute(
+    Gear,
+    VL,
+    reference_Gear,
+    reference_VL_used,
+    EC_share_2024=EC_share,
+    OC_share_2024=OC_share,
+    LC_share_2024=LC_share,
+    other_income_share_2024=other_income_share,
+    GVA_rate_available_2024=
+      is.finite(OC_share),
+    GP_rate_available_2024=
+      is.finite(OC_share) &
+      is.finite(LC_share),
+    AER_rate_available_2024=
+      is.finite(OC_share) &
+      is.finite(LC_share) &
+      is.finite(other_income_share)
+  )
+
+benchmark_2024_rate_complete <-
+  all(
+    rate24_mapping_audit$
+      GP_rate_available_2024
+  )
+
+smart31_kable(
+  rate24_mapping_audit,
+  digits=5,
+  caption=
+    smart31_report_label("Mapped 2024-only rate availability; suppressed source values remain unavailable")
+)
+
+cat(
+  smart31_report_label("\nStrict 2024-only Gear-VL rate set complete for GP: "),
+  benchmark_2024_rate_complete,
+  "\n",
+  sep=""
+)
+```
+
+## Load Step 2 results
+
+```{r economic_audit-04-step2}
+
+step2_path <- resolve(cfg$step2_result_file)
+ov <- readRDS(step2_path)
+if(!is.list(ov)) stop31("Invalid Step 2 overview")
+if(!identical(ov$metadata$storage_format %||% NA_character_,"SMART31.partitioned.results.1")) stop31("Expected partitioned Step 2 result")
+req(ov$run_archives,c("run_id","scenario_id","method","replicate","feasible","archive_relative"),"run_archives")
+man <- ov$run_archives |> filter(feasible) |> arrange(scenario_id,method,replicate)
+if(!nrow(man)) stop31("No feasible Step 2 archives")
+step2_s1 <- as.character(ov$metadata$step1_bundle_md5 %||% NA_character_)
+if(!is.na(step2_s1)&&nzchar(step2_s1)&&step2_s1!=md5_s1) stop31("Step 2 / Step 1 provenance mismatch")
+step2_other_gvl_mode <- as.character(ov$metadata$other_gvl_mode %||% NA_character_)
+step2_other_gvl_beta <- as.numeric(ov$metadata$other_gvl_beta %||% NA_real_)
+step2_other_gvl_cap <- isTRUE(ov$metadata$other_gvl_cap_at_reference)
+
+if(is.na(step2_other_gvl_mode) || !nzchar(step2_other_gvl_mode) ||
+   !is.finite(step2_other_gvl_beta)) {
+  stop31("Step 2 overview does not expose the other-GVL configuration")
+}
+
+read_other_gvl_audit <- function(scenario_id){
+  safe_sid <- gsub("[^A-Za-z0-9_-]","_",as.character(scenario_id))
+  f <- file.path(dirname(step2_path),"diagnostics_other_gvl",safe_sid,
+                 "other_gvl_activity_audit.csv")
+  if(!file.exists(f)){
+    stop31(
+      "Missing Step 2 other-GVL audit for ",scenario_id,": ",f,
+      ". Keep diagnostics_other_gvl together with the frozen Step 2 outputs."
+    )
+  }
+
+  z <- readr::read_csv(f,show_col_types=FALSE) |> as_tibble()
+  req(z,c("CFR","Gear","realised","target","reference","active_days",
+          "historical_days","activity_ratio","mode","beta","cap_at_reference"),
+      paste0("other_gvl_activity_audit ",scenario_id))
+
+  z <- z |>
+    transmute(
+      CFR=trimws(as.character(CFR)),
+      Gear=code(Gear),
+      GVL_other_other_gvl_realised=as.numeric(realised),
+      GVL_other_other_gvl_target=as.numeric(target),
+      GVL_other_step1_reference_audit=as.numeric(reference),
+      other_gvl_base_active_days=as.numeric(active_days),
+      other_gvl_historical_days=as.numeric(historical_days),
+      other_gvl_activity_ratio=as.numeric(activity_ratio),
+      other_gvl_other_gvl_mode=as.character(mode),
+      other_gvl_other_gvl_beta=as.numeric(beta),
+      other_gvl_other_gvl_cap=as.logical(cap_at_reference)
+    )
+
+  if(anyDuplicated(z[c("CFR","Gear")]))
+    stop31("other_gvl_activity_audit not unique by CFR-Gear for ",scenario_id)
+
+  if(any(!is.finite(z$GVL_other_other_gvl_realised)) ||
+     any(!is.finite(z$GVL_other_other_gvl_target)) ||
+     any(abs(z$GVL_other_other_gvl_realised-z$GVL_other_other_gvl_target) >
+           1e-8*pmax(1,abs(z$GVL_other_other_gvl_target)))) {
+    stop31("Internally inconsistent other_gvl_activity_audit for ",scenario_id)
+  }
+
+  modes <- unique(z$other_gvl_other_gvl_mode)
+  betas <- unique(z$other_gvl_other_gvl_beta)
+  caps <- unique(z$other_gvl_other_gvl_cap)
+
+  if(length(modes)!=1L || modes[[1L]]!=step2_other_gvl_mode ||
+     length(betas)!=1L || abs(betas[[1L]]-step2_other_gvl_beta)>1e-12 ||
+     length(caps)!=1L || isTRUE(caps[[1L]])!=step2_other_gvl_cap) {
+    stop31("other-GVL audit metadata disagrees with Step 2 overview for ",scenario_id)
+  }
+
+  attr(z,"audit_file") <- normalizePath(f,mustWork=TRUE)
+  z
+}
+
+cat(
+  "Step 2:",step2_path,
+  "\nOverview MD5:",unname(tools::md5sum(step2_path)),
+  "\nFeasible archives:",nrow(man),
+  "\nOther-GVL mode:",step2_other_gvl_mode,
+  "\nOther-GVL beta:",step2_other_gvl_beta,
+  "\nOther-GVL cap:",step2_other_gvl_cap,
+  "\n"
+)
+```
+
+## Archive impact
+
+```{r economic_audit-05-archive-impact}
+
+dims_names <- c("scenario_id","scenario_year","representative_period","member_state","cm_status","method","replicate")
+src_md5 <- as.character(ov$metadata$scientific_source_md5 %||% NA_character_)
+sum_complete <- function(x) if(length(x)&&all(is.finite(x))) sum(x) else NA_real_
+gear_list <- vector("list",nrow(man)); vessel_list <- vector("list",nrow(man)); audit_list <- vector("list",nrow(man))
+
+for(i in seq_len(nrow(man))){
+  af <- file.path(dirname(step2_path),as.character(man$archive_relative[[i]]))
+  if(!file.exists(af)) stop31("Missing archive: ",af)
+  ar <- readRDS(af)
+  if(!is.list(ar)||!is.list(ar$run)||!is.list(ar$metadata)) stop31("Invalid archive: ",af)
+  amd5 <- as.character(ar$metadata$scientific_source_md5 %||% NA_character_)
+  if(!is.na(src_md5)&&nzchar(src_md5)&&amd5!=src_md5) stop31("Scientific-source mismatch: ",af)
+  run <- ar$run; if(!isTRUE(run$feasible)||!is.list(run$outputs)) stop31("Archive not feasible/complete: ",af)
+  o <- run$outputs
+  for(nm in c("economic_monthly","spatial_pattern","catches")) if(!is.data.frame(o[[nm,exact=TRUE]])) stop31("Missing full table ",nm," in ",af)
+  em <- as_tibble(o[["economic_monthly",exact=TRUE]]); sp <- as_tibble(o[["spatial_pattern",exact=TRUE]]); ca <- as_tibble(o[["catches",exact=TRUE]])
+  req(em,c(dims_names,"CFR","GVL_6sp","GVL_other_reference","GVL","EC","OC","LC","GVA","GP"),"economic_monthly")
+  req(sp,c(dims_names,"CFR","Gear","days_at_sea"),"spatial_pattern")
+  req(ca,c(dims_names,"CFR","Gear","simulation_treatment","GVL"),"catches")
+  dims <- distinct(select(em,all_of(dims_names))); if(nrow(dims)!=1L) stop31("Multiple identities in one archive: ",af)
+
+  active <- sp |> transmute(CFR=trimws(as.character(CFR)),Gear=code(Gear),days=as.numeric(days_at_sea)) |> group_by(CFR,Gear) |> summarise(gear_days=sum(days),.groups="drop") |> filter(is.finite(gear_days),gear_days>1e-12)
+  six <- ca |> filter(simulation_treatment=="activity_supported_spatial_lpue_production") |> transmute(CFR=trimws(as.character(CFR)),Gear=code(Gear),GVL=as.numeric(GVL))
+  if(nrow(six)&&any(!is.finite(six$GVL))) stop31("Non-finite activity-supported GVL in ",af)
+  six <- six |> group_by(CFR,Gear) |> summarise(GVL_6sp_rec=sum(GVL),.groups="drop")
+
+  scenario_id_this <- as.character(dims$scenario_id[[1L]])
+  other_gvl_other <- read_other_gvl_audit(scenario_id_this)
+
+  ge <- full_join(active,six,by=c("CFR","Gear")) |>
+    mutate(
+      gear_days=coalesce(gear_days,0),
+      GVL_6sp_rec=coalesce(GVL_6sp_rec,0),
+      active_gear=gear_days>1e-12
+    ) |>
+    left_join(other,by=c("CFR","Gear"),relationship="many-to-one") |>
+    left_join(other_gvl_other,by=c("CFR","Gear"),relationship="many-to-one") |>
+    left_join(step2_vessel_rates,by=c("CFR","Gear"),relationship="many-to-one")
+
+  bad_other <- ge |>
+    filter(
+      active_gear &
+      (
+        is.na(VL) |
+        !is.finite(GVL_other_step1_reference) |
+        !is.finite(GVL_other_other_gvl_realised)
+      )
+    )
+
+  if(nrow(bad_other)){
+    print(bad_other)
+    stop31("Active vessel-gear lacks frozen other-GVL reference")
+  }
+
+  bad_old_rates <- ge |>
+    filter(
+      active_gear &
+      (
+        !is.finite(step2_OC_share) |
+        !is.finite(step2_LC_share)
+      )
+    )
+
+  if(nrow(bad_old_rates)){
+    print(bad_old_rates)
+    stop31("Active vessel-gear lacks the exact CFR-specific IBM.eco rate used by Step 2")
+  }
+
+  ge <- ge |>
+    mutate(
+
+      GVL_other_rec=if_else(
+        active_gear,
+        GVL_other_other_gvl_realised,
+        0
+      ),
+      GVL_rec=GVL_6sp_rec+GVL_other_rec
+    ) |>
+    filter(active_gear|GVL_6sp_rec>1e-12)
+
+  ge <- ge |> left_join(recent,by=c("Gear","VL"),relationship="many-to-one") |> rename(new_EC_share=EC_share,new_OC_share=OC_share,new_LC_share=LC_share,new_OI_share=other_income_share,new_FTE_rate=FTE_per_active_vessel,new_crew_rate=engaged_crew_per_active_vessel) |> left_join(rate24 |> select(Gear,VL,EC_share,OC_share,LC_share,other_income_share) |> rename(EC_share_2024=EC_share,OC_share_2024=OC_share,LC_share_2024=LC_share,OI_share_2024=other_income_share),by=c("Gear","VL"),relationship="many-to-one")
+
+  needed <- c("step2_OC_share","step2_LC_share","new_EC_share","new_OC_share","new_LC_share","new_OI_share","new_FTE_rate","new_crew_rate")
+  if(any(!is.finite(as.matrix(ge[needed])))){
+    print(ge |> filter(if_any(all_of(needed),~!is.finite(.x))))
+    stop31("Missing exact Step 2 or candidate rate for active vessel-gear")
+  }
+
+  ge <- ge |>
+    mutate(
+
+      old_OC_rec=GVL_rec*step2_OC_share,
+      old_LC_rec=GVL_rec*step2_LC_share,
+
+      new_OC=GVL_rec*new_OC_share,
+      new_LC=GVL_rec*new_LC_share,
+      new_OI=GVL_rec*new_OI_share,
+      new_EC_ref=GVL_rec*new_EC_share,
+
+      OC_2024=
+        case_when(
+          GVL_rec <= 1e-12 ~ 0,
+          is.finite(OC_share_2024) ~
+            GVL_rec*OC_share_2024,
+          TRUE ~ NA_real_
+        ),
+      LC_2024=
+        case_when(
+          GVL_rec <= 1e-12 ~ 0,
+          is.finite(LC_share_2024) ~
+            GVL_rec*LC_share_2024,
+          TRUE ~ NA_real_
+        ),
+      OI_2024=
+        case_when(
+          GVL_rec <= 1e-12 ~ 0,
+          is.finite(OI_share_2024) ~
+            GVL_rec*OI_share_2024,
+          TRUE ~ NA_real_
+        ),
+      GVA_rate_available_2024=
+        GVL_rec <= 1e-12 |
+        is.finite(OC_share_2024),
+      GP_rate_available_2024=
+        GVL_rec <= 1e-12 |
+        (
+          is.finite(OC_share_2024) &
+          is.finite(LC_share_2024)
+        ),
+      AER_rate_available_2024=
+        GVL_rec <= 1e-12 |
+        (
+          is.finite(OC_share_2024) &
+          is.finite(LC_share_2024) &
+          is.finite(OI_share_2024)
+        )
+    ) |>
+    group_by(CFR) |>
+    mutate(
+      vessel_days=sum(gear_days),
+      gear_day_share=if_else(vessel_days>0,gear_days/vessel_days,0),
+      FTE_new=gear_day_share*new_FTE_rate,
+      crew_new=gear_day_share*new_crew_rate
+    ) |>
+    ungroup()
+
+  actual <- em |> transmute(CFR=trimws(as.character(CFR)),GVL_6sp=as.numeric(GVL_6sp),GVL_other_actual=as.numeric(GVL_other_reference),GVL=as.numeric(GVL),EC=as.numeric(EC),OC=as.numeric(OC),LC=as.numeric(LC),GVA=as.numeric(GVA),GP=as.numeric(GP)) |> group_by(CFR) |> summarise(across(everything(),sum),.groups="drop")
+  rec <- ge |> group_by(CFR) |> summarise(gear_days=sum(gear_days),GVL_6sp_rec=sum(GVL_6sp_rec),GVL_other_rec=sum(GVL_other_rec),GVL_rec=sum(GVL_rec),old_OC_rec=sum(old_OC_rec),old_LC_rec=sum(old_LC_rec),new_OC=sum(new_OC),new_LC=sum(new_LC),new_OI=sum(new_OI),new_EC_ref=sum(new_EC_ref),OC_2024=sum_complete(OC_2024),LC_2024=sum_complete(LC_2024),OI_2024=sum_complete(OI_2024),FTE_new=sum(FTE_new),crew_new=sum(crew_new),.groups="drop")
+
+  vi <- full_join(actual,rec,by="CFR") |>
+    mutate(
+      across(
+        c(
+          gear_days,
+          GVL_6sp_rec,
+          GVL_other_rec,
+          GVL_rec,
+          old_OC_rec,
+          old_LC_rec,
+          new_OC,
+          new_LC,
+          new_OI,
+          new_EC_ref,
+          FTE_new,
+          crew_new
+        ),
+        ~coalesce(.x,0)
+      ),
+
+      OC_2024=
+        case_when(
+          is.finite(OC_2024) ~ OC_2024,
+          is.finite(GVL) &
+            abs(GVL) <= 1e-12 ~ 0,
+          TRUE ~ NA_real_
+        ),
+      LC_2024=
+        case_when(
+          is.finite(LC_2024) ~ LC_2024,
+          is.finite(GVL) &
+            abs(GVL) <= 1e-12 ~ 0,
+          TRUE ~ NA_real_
+        ),
+      OI_2024=
+        case_when(
+          is.finite(OI_2024) ~ OI_2024,
+          is.finite(GVL) &
+            abs(GVL) <= 1e-12 ~ 0,
+          TRUE ~ NA_real_
+        ),
+
+      GVL_ok=
+        pass_recon(
+          GVL,
+          GVL_rec,
+          cfg$reconstruction_tolerance_fraction
+        ),
+      GVL6_ok=
+        pass_recon(
+          GVL_6sp,
+          GVL_6sp_rec,
+          cfg$reconstruction_tolerance_fraction
+        ),
+      other_ok=
+        pass_recon(
+          GVL_other_actual,
+          GVL_other_rec,
+          cfg$reconstruction_tolerance_fraction
+        ),
+      OC_ok=
+        pass_recon(
+          OC,
+          old_OC_rec,
+          cfg$reconstruction_tolerance_fraction
+        ),
+      LC_ok=
+        pass_recon(
+          LC,
+          old_LC_rec,
+          cfg$reconstruction_tolerance_fraction
+        ),
+
+      GVA_new=
+        GVL-EC-new_OC,
+      GP_new=
+        GVL-EC-new_OC-new_LC,
+      GVA_new_AER=
+        GVL+new_OI-EC-new_OC,
+      GP_new_AER=
+        GVL+new_OI-EC-new_OC-new_LC,
+      GVA_full_EC_sens=
+        GVL-new_EC_ref-new_OC,
+      GP_full_EC_sens=
+        GVL-new_EC_ref-new_OC-new_LC,
+
+      GVA_2024=
+        if_else(
+          is.finite(OC_2024),
+          GVL-EC-OC_2024,
+          NA_real_
+        ),
+      GP_2024=
+        if_else(
+          is.finite(OC_2024) &
+            is.finite(LC_2024),
+          GVL-EC-OC_2024-LC_2024,
+          NA_real_
+        ),
+
+      rel_GVA=
+        rdiff(GVA_new,GVA),
+      rel_GP=
+        rdiff(GP_new,GP),
+      GPM_old=
+        ratio(GP,GVL),
+      GPM_new=
+        ratio(GP_new,GVL),
+      GP_sign_flip=
+        is.finite(GP_new) &
+        is.finite(GP) &
+        sign(GP_new)!=sign(GP)
+    )
+
+  zero_gvl_2024_fail <- vi |>
+    filter(
+      is.finite(GVL) &
+      abs(GVL) <= 1e-12 &
+      (
+        !is.finite(OC_2024) |
+        !is.finite(LC_2024)
+      )
+    )
+
+  if(nrow(zero_gvl_2024_fail)){
+    print(
+      zero_gvl_2024_fail |>
+        select(
+          CFR,
+          GVL,
+          OC_2024,
+          LC_2024
+        ),
+      n=Inf,
+      width=Inf
+    )
+    stop31(
+      smart31_report_label("HARD GATE: zero-GVL vessel still has non-finite 2024 OC/LC after zero-exposure normalisation.")
+    )
+  }
+  ok <- with(vi,GVL_ok&GVL6_ok&other_ok&OC_ok&LC_ok)
+
+  if(any(!ok)){
+    failure_table <- vi |>
+      filter(!ok) |>
+      transmute(
+        CFR,
+        GVL, GVL_rec,
+        delta_GVL=GVL_rec-GVL,
+        GVL_6sp, GVL_6sp_rec,
+        delta_GVL6=GVL_6sp_rec-GVL_6sp,
+        GVL_other_actual, GVL_other_rec,
+        delta_other=GVL_other_rec-GVL_other_actual,
+        OC, old_OC_rec,
+        delta_OC=old_OC_rec-OC,
+        LC, old_LC_rec,
+        delta_LC=old_LC_rec-LC,
+        GVL_ok,GVL6_ok,other_ok,OC_ok,LC_ok
+      )
+    print(failure_table,n=Inf,width=Inf)
+    stop31(
+      "HARD GATE: exact frozen Step 2 reconstruction failed in ",
+      basename(af),
+      ". Inspect the printed component residuals above; no candidate rates were promoted."
+    )
+  }
+
+  ge <- bind_cols(dims[rep(1L,nrow(ge)),,drop=FALSE],ge) |> relocate(all_of(dims_names))
+  vi <- bind_cols(dims[rep(1L,nrow(vi)),,drop=FALSE],vi) |> relocate(all_of(dims_names))
+  gear_list[[i]]<-ge; vessel_list[[i]]<-vi
+  audit_list[[i]] <- dims |> mutate(
+    archive=normalizePath(af,mustWork=TRUE),
+    archive_md5=unname(tools::md5sum(af)),
+    other_gvl_audit_file=attr(other_gvl_other,"audit_file"),
+    other_gvl_audit_md5=unname(tools::md5sum(attr(other_gvl_other,"audit_file"))),
+    n_vessels=nrow(vi),
+    n_active=sum(vi$gear_days>1e-12),
+    max_abs_GVL_diff=max(abs(vi$GVL-vi$GVL_rec)),
+    max_abs_OC_diff=max(abs(vi$OC-vi$old_OC_rec)),
+    max_abs_LC_diff=max(abs(vi$LC-vi$old_LC_rec)),
+    all_reconstruction_gates_pass=all(ok)
+  )
+  rm(ar,run,o,em,sp,ca,active,six); invisible(gc(FALSE))
+}
+gear_impact <- bind_rows(gear_list); vessel_impact <- bind_rows(vessel_list); archive_audit <- bind_rows(audit_list)
+if(!all(archive_audit$all_reconstruction_gates_pass)) stop31("At least one archive failed reconstruction")
+smart31_kable(archive_audit,digits=8,caption="Hard reconstruction audit of frozen Step 2 accounting")
+```
+
+## Fleet impact
+
+```{r economic_audit-06-fleet-impact}
+
+fleet <- vessel_impact |> group_by(across(all_of(dims_names))) |> summarise(n_vessels=n(),n_active_vessels=sum(gear_days>1e-12),GVL=sum(GVL),EC_physical=sum(EC),OC_old=sum(OC),LC_old=sum(LC),GVA_old=sum(GVA),GP_old=sum(GP),OC_new=sum(new_OC),LC_new=sum(new_LC),OtherIncome_new=sum(new_OI),GVA_new=sum(GVA_new),GP_new=sum(GP_new),GVA_new_AER=sum(GVA_new_AER),GP_new_AER=sum(GP_new_AER),EC_new_reference=sum(new_EC_ref),GVA_full_EC_sens=sum(GVA_full_EC_sens),GP_full_EC_sens=sum(GP_full_EC_sens),GVA_2024=sum_complete(GVA_2024),GP_2024=sum_complete(GP_2024),estimated_FTE=sum(FTE_new),estimated_engaged_crew=sum(crew_new),n_GP_sign_flips=sum(GP_sign_flip),.groups="drop") |> mutate(GPM_old=ratio(GP_old,GVL),GPM_new=ratio(GP_new,GVL),GPM_new_AER=ratio(GP_new_AER,GVL),relative_GVA_change=rdiff(GVA_new,GVA_old),relative_GP_change=rdiff(GP_new,GP_old),relative_GVA_change_AER=rdiff(GVA_new_AER,GVA_old),relative_GVA_change_full_EC=rdiff(GVA_full_EC_sens,GVA_old),recent_vs_2024_GVA_sensitivity=rdiff(GVA_2024,GVA_new),material_GVA_change=is.finite(relative_GVA_change)&abs(relative_GVA_change)>=cfg$material_GVA_change_fraction)
+smart31_kable(fleet,digits=5,caption="Fleet-level old-reference versus candidate-reference impact")
+```
+
+## Ranking
+
+```{r economic_audit-07-ranking}
+
+ranking <- fleet |> group_by(representative_period,method,replicate) |> mutate(old_GVA_rank=rank(-GVA_old,ties.method="min"),new_GVA_rank=rank(-GVA_new,ties.method="min"),GVA_rank_changed=old_GVA_rank!=new_GVA_rank) |> ungroup() |> arrange(representative_period,method,replicate,old_GVA_rank)
+smart31_kable(ranking |> select(scenario_id,representative_period,method,replicate,GVA_old,GVA_new,relative_GVA_change,old_GVA_rank,new_GVA_rank,GVA_rank_changed,material_GVA_change),digits=5,caption="Does the candidate accounting change the ordering of frozen runs?")
+```
+
+## Vessel distribution
+
+```{r economic_audit-08-vessel-distribution}
+
+vd <- vessel_impact |> group_by(across(all_of(dims_names))) |> summarise(n_vessels=n(),n_old_GP_negative=sum(GP<0),n_new_GP_negative=sum(GP_new<0),n_GP_sign_flips=sum(GP_sign_flip),median_relative_GVA_change=median(rel_GVA[is.finite(rel_GVA)]),q10_relative_GVA_change=quantile(rel_GVA[is.finite(rel_GVA)],0.10,names=FALSE),q90_relative_GVA_change=quantile(rel_GVA[is.finite(rel_GVA)],0.90,names=FALSE),median_relative_GP_change=median(rel_GP[is.finite(rel_GP)]),.groups="drop")
+smart31_kable(vd,digits=5,caption="Distributional impact across vessels")
+```
+
+## Decomposition
+
+```{r economic_audit-09-decomposition}
+
+decomp <- fleet |> transmute(across(all_of(dims_names)),GVL,EC_physical,delta_OC=OC_new-OC_old,delta_LC=LC_new-LC_old,OtherIncome_new,delta_GVA_core=GVA_new-GVA_old,delta_GP_core=GP_new-GP_old,delta_GVA_AER=GVA_new_AER-GVA_old)
+smart31_kable(decomp,digits=2,caption="Economic decomposition of the post-hoc change")
+```
+
+## GVA comparison
+
+```{r economic_audit-10-plot-gva, fig.width=12, fig.height=8}
+
+pd <- fleet |> select(scenario_id,representative_period,method,replicate,GVA_old,GVA_new,GVA_new_AER) |> pivot_longer(cols=c(GVA_old,GVA_new,GVA_new_AER),names_to="accounting",values_to="GVA") |> mutate(accounting=recode(accounting,GVA_old="Frozen Step 2",GVA_new="Candidate OC/LC; physical EC retained",GVA_new_AER="Candidate OC/LC + Other income"),run=paste0(scenario_id," | ",method))
+ggplot(pd,aes(run,GVA,shape=accounting,group=accounting))+geom_point(size=2.5)+facet_wrap(~representative_period,scales="free_x")+labs(title=smart31_report_label("Economic impact of the candidate 2022-2024 reference at fixed Step 2 behaviour"),subtitle="Principal comparison retains the physical Step 2 energy cost.",x="Frozen Step 2 run",y="Gross Value Added (€)",shape=NULL)+theme_minimal(base_size=10)+theme(legend.position="bottom",axis.text.x=element_text(angle=45,hjust=1))
+```
+
+## Plot relative
+
+```{r economic_audit-11-plot-relative, fig.width=11, fig.height=7}
+
+ggplot(fleet,aes(interaction(scenario_id,method,sep=" | "),relative_GVA_change))+geom_hline(yintercept=0,linewidth=.4)+geom_hline(yintercept=c(-cfg$material_GVA_change_fraction,cfg$material_GVA_change_fraction),linetype="dashed",linewidth=.4)+geom_point(size=2.5)+facet_wrap(~representative_period,scales="free_x")+scale_y_continuous(labels=scales::percent)+labs(title="Relative change in fleet GVA after updating OC and LC",subtitle="Dashed lines are the diagnostic materiality threshold; the optimiser is not rerun.",x="Frozen Step 2 run",y="Post-hoc GVA change")+theme_minimal(base_size=10)+theme(axis.text.x=element_text(angle=45,hjust=1))
+```
+
+## Energy-cost sensitivity
+
+```{r economic_audit-12-ec-sensitivity}
+
+ec_sens <- fleet |> transmute(across(all_of(dims_names)),EC_physical,EC_new_reference,EC_reference_vs_physical=rdiff(EC_new_reference,EC_physical),GVA_new_physical_EC=GVA_new,GVA_full_reference_EC=GVA_full_EC_sens,GVA_effect_of_replacing_physical_EC=GVA_full_EC_sens-GVA_new)
+smart31_kable(ec_sens,digits=5,caption="Secondary EC sensitivity: aggregate reference EC versus physical Step 2 EC")
+```
+
+## Workforce
+
+```{r economic_audit-13-workforce}
+
+workforce <- fleet |> select(all_of(dims_names),n_active_vessels,estimated_FTE,estimated_engaged_crew) |> mutate(FTE_per_active_vessel=ratio(estimated_FTE,n_active_vessels),crew_per_active_vessel=ratio(estimated_engaged_crew,n_active_vessels))
+smart31_kable(workforce,digits=4,caption="Candidate workforce indicators attached to frozen Step 2 scenarios")
+```
+
+## Temporal
+
+```{r economic_audit-14-temporal}
+
+temporal_coverage <- gear_impact |>
+  group_by(
+    across(
+      all_of(dims_names)
+    )
+  ) |>
+  summarise(
+    total_GVL =
+      sum(GVL_rec),
+    GVL_with_2024_OC =
+      sum(
+        GVL_rec[
+          GVA_rate_available_2024 &
+          GVL_rec > 1e-12
+        ],
+        na.rm=TRUE
+      ),
+    GVL_with_2024_OC_LC =
+      sum(
+        GVL_rec[
+          GP_rate_available_2024 &
+          GVL_rec > 1e-12
+        ],
+        na.rm=TRUE
+      ),
+    GVL_with_2024_OC_LC_OI =
+      sum(
+        GVL_rec[
+          AER_rate_available_2024 &
+          GVL_rec > 1e-12
+        ],
+        na.rm=TRUE
+      ),
+    GVA_2024_GVL_coverage =
+      ratio(
+        GVL_with_2024_OC,
+        total_GVL
+      ),
+    GP_2024_GVL_coverage =
+      ratio(
+        GVL_with_2024_OC_LC,
+        total_GVL
+      ),
+    AER_2024_GVL_coverage =
+      ratio(
+        GVL_with_2024_OC_LC_OI,
+        total_GVL
+      ),
+    missing_GVA_rate_segments =
+      paste(
+        sort(
+          unique(
+            paste(
+              Gear[
+                !GVA_rate_available_2024 &
+                GVL_rec > 1e-12
+              ],
+              VL[
+                !GVA_rate_available_2024 &
+                GVL_rec > 1e-12
+              ],
+              sep=" / "
+            )
+          )
+        ),
+        collapse=" | "
+      ),
+    missing_GP_rate_segments =
+      paste(
+        sort(
+          unique(
+            paste(
+              Gear[
+                !GP_rate_available_2024 &
+                GVL_rec > 1e-12
+              ],
+              VL[
+                !GP_rate_available_2024 &
+                GVL_rec > 1e-12
+              ],
+              sep=" / "
+            )
+          )
+        ),
+        collapse=" | "
+      ),
+    .groups="drop"
+  ) |>
+  mutate(
+    strict_GVA_2024_available =
+      is.finite(
+        GVA_2024_GVL_coverage
+      ) &
+      abs(
+        GVA_2024_GVL_coverage - 1
+      ) <= 1e-12,
+    strict_GP_2024_available =
+      is.finite(
+        GP_2024_GVL_coverage
+      ) &
+      abs(
+        GP_2024_GVL_coverage - 1
+      ) <= 1e-12
+  )
+
+temporal <- fleet |>
+  select(
+    all_of(dims_names),
+    GVA_new,
+    GP_new,
+    GVA_2024,
+    GP_2024
+  ) |>
+  left_join(
+    temporal_coverage,
+    by=dims_names,
+    relationship="one-to-one"
+  ) |>
+  transmute(
+    across(
+      all_of(dims_names)
+    ),
+    GVA_2022_2024=GVA_new,
+    GVA_2024=
+      if_else(
+        strict_GVA_2024_available,
+        GVA_2024,
+        NA_real_
+      ),
+    relative_GVA_difference=
+      if_else(
+        strict_GVA_2024_available,
+        rdiff(
+          GVA_2024,
+          GVA_new
+        ),
+        NA_real_
+      ),
+    GP_2022_2024=GP_new,
+    GP_2024=
+      if_else(
+        strict_GP_2024_available,
+        GP_2024,
+        NA_real_
+      ),
+    relative_GP_difference=
+      if_else(
+        strict_GP_2024_available,
+        rdiff(
+          GP_2024,
+          GP_new
+        ),
+        NA_real_
+      ),
+    GVA_2024_GVL_coverage,
+    GP_2024_GVL_coverage,
+    missing_GVA_rate_segments,
+    missing_GP_rate_segments,
+    temporal_sensitivity_status=
+      case_when(
+        strict_GVA_2024_available &
+          strict_GP_2024_available ~
+          "AVAILABLE_COMPLETE",
+        TRUE ~
+          "UNAVAILABLE_INCOMPLETE_2024_REFERENCE"
+      )
+  )
+
+smart31_kable(
+  temporal,
+  digits=5,
+  caption=
+    smart31_report_label("2024-only sensitivity with explicit coverage; suppressed values are not imputed")
+)
+
+bad_temporal_consistency <- temporal |>
+  filter(
+    temporal_sensitivity_status == "AVAILABLE_COMPLETE" &
+      (
+        !is.finite(GVA_2024) |
+        !is.finite(GP_2024)
+      )
+  )
+
+if(nrow(bad_temporal_consistency)){
+  bad_vessels_2024 <- vessel_impact |>
+    semi_join(
+      bad_temporal_consistency |>
+        select(
+          all_of(dims_names)
+        ),
+      by=dims_names
+    ) |>
+    filter(
+      !is.finite(GVA_2024) |
+      !is.finite(GP_2024)
+    ) |>
+    select(
+      all_of(dims_names),
+      CFR,
+      gear_days,
+      GVL,
+      EC,
+      OC_2024,
+      LC_2024,
+      OI_2024,
+      GVA_2024,
+      GP_2024
+    )
+
+  print(
+    bad_temporal_consistency,
+    n=Inf,
+    width=Inf
+  )
+  print(
+    bad_vessels_2024,
+    n=Inf,
+    width=Inf
+  )
+
+  stop31(
+    smart31_report_label("HARD GATE: 2024 coverage is complete but GVA_2024/GP_2024 is not finite. See printed vessel diagnostics.")
+  )
+}
+
+temporal_status_summary <- temporal |>
+  count(
+    temporal_sensitivity_status,
+    name="n_runs"
+  )
+
+smart31_kable(
+  temporal_status_summary,
+  caption=
+    smart31_report_label("Availability status of the strict 2024-only whole-fleet sensitivity")
+)
+```
+
+## Annex economic output
+
+```{r economic_audit-15-annex-economic-output}
+
+annex_economic_outputs <- fleet |>
+  transmute(
+    scenario_id,
+    representative_period,
+    cm_status,
+    method,
+    replicate,
+    active_vessels=
+      n_active_vessels,
+
+    GVL_eur=
+      GVL,
+    EC_physical_eur=
+      EC_physical,
+    OC_candidate_eur=
+      OC_new,
+    LC_candidate_eur=
+      LC_new,
+    OtherIncome_candidate_eur=
+      OtherIncome_new,
+
+    GVA_SMART_posthoc_eur=
+      GVA_new,
+    GP_SMART_posthoc_eur=
+      GP_new,
+    GPM_SMART_posthoc=
+      GPM_new,
+
+    GVA_AER_STECF_eur=
+      GVA_new_AER,
+    GP_AER_STECF_eur=
+      GP_new_AER,
+    GPM_AER_STECF=
+      GPM_new_AER,
+
+    estimated_FTE_reference=
+      estimated_FTE,
+    estimated_engaged_crew_reference=
+      estimated_engaged_crew,
+
+    GP_sign_flip_vessels=
+      n_GP_sign_flips,
+
+    economic_reference_basis=
+      paste0(
+        "OC/LC/Other income: pooled ",
+        cfg$recent_year_min,
+        "-",
+        cfg$recent_year_max,
+        "; EC: frozen Step2 physical fuel model"
+      ),
+
+    behavioural_status=
+      "Frozen Step2 behaviour; post-hoc accounting only",
+
+    capital_status=
+      "Excluded pending source definition/unit clarification"
+  )
+
+smart31_kable(
+  annex_economic_outputs,
+  digits=4,
+  caption=
+    "Recommended economic outputs for Annex support"
+)
+```
+
+## Decision
+
+```{r economic_audit-16-decision}
+
+material <-
+  any(
+    fleet$material_GVA_change,
+    na.rm=TRUE
+  )
+
+rank_change <-
+  any(
+    ranking$GVA_rank_changed,
+    na.rm=TRUE
+  )
+
+sign_flip <-
+  any(
+    fleet$n_GP_sign_flips > 0,
+    na.rm=TRUE
+  )
+
+max_gva <-
+  max(
+    abs(
+      fleet$relative_GVA_change
+    ),
+    na.rm=TRUE
+  )
+
+strict_2024_available <-
+  all(
+    temporal$
+      temporal_sensitivity_status ==
+      "AVAILABLE_COMPLETE"
+  )
+
+decision <- tribble(
+  ~diagnostic, ~status, ~interpretation,
+
+  "Step 2 reconstruction",
+  if(
+    all(
+      archive_audit$
+        all_reconstruction_gates_pass
+    )
+  ) "PASS" else "FAIL",
+  paste0(
+    "Frozen GVL is reconstructed from activity-supported Step 2 catches plus ",
+    "the exact scenario-specific realised other-GVL audit; frozen OC and ",
+    "LC are reproduced with the CFR-specific IBM.eco rates actually used by ",
+    "Step 2 before candidate rates are applied."
+  ),
+
+  smart31_report_label("Candidate-rate coverage 2022-2024"),
+  "PASS",
+  paste0(
+    "Every mapped SMART Gear-VL group has pooled ",
+    cfg$recent_year_min,
+    "-",
+    cfg$recent_year_max,
+    " OC, LC, Other income, FTE and engaged-crew candidate rates."
+  ),
+
+  "Material post-hoc GVA impact",
+  if(material) "FLAG" else "NO_FLAG",
+  paste0(
+    "Maximum absolute fleet GVA change = ",
+    scales::percent(
+      max_gva,
+      accuracy=.1
+    ),
+    "; diagnostic threshold = ",
+    scales::percent(
+      cfg$material_GVA_change_fraction,
+      accuracy=.1
+    ),
+    "."
+  ),
+
+  "Frozen-run GVA ordering",
+  if(rank_change) "FLAG" else "NO_FLAG",
+  if(rank_change) {
+    paste0(
+      "At least one frozen-run ordering changes under candidate accounting; ",
+      "a full Step 2 rerun should be reviewed."
+    )
+  } else {
+    "No frozen-run GVA ordering changes under candidate accounting."
+  },
+
+  "Vessel GP sign changes",
+  if(sign_flip) "FLAG" else "NO_FLAG",
+  paste0(
+    "GP sign changes are a distributional reporting issue and do not by ",
+    "themselves imply that the GVA-optimised Step 2 must be rerun."
+  ),
+
+  "Physical EC",
+  "RETAIN_IN_MAIN_ANALYSIS",
+  paste0(
+    "Step 2 uses realised fishing and steaming fuel consumption. ",
+    "The aggregate economic EC/GVL rate remains a benchmark sensitivity only."
+  ),
+
+  "Other income",
+  "PARALLEL_AER_STECF_ACCOUNT",
+  paste0(
+    "Other income is included in the separate AER/STECF-style reporting ",
+    "account and is not silently inserted into the frozen Step 2 optimisation ",
+    "objective."
+  ),
+
+  "Capital / INV",
+  "EXCLUDED",
+  paste0(
+    "Capital remains excluded pending clarification of the source definitions ",
+    "and units of Value of physical capital and Consumption of fixed capital."
+  ),
+
+  smart31_report_label("Strict 2024-only sensitivity"),
+  if(
+    strict_2024_available
+  ) "AVAILABLE_COMPLETE" else
+    "UNAVAILABLE_INCOMPLETE_REFERENCE",
+  if(
+    strict_2024_available
+  ) {
+    smart31_report_label("The 2024-only reference fully covers all realised SMART Gear-VL GVL.")
+  } else {
+    paste0(
+      smart31_report_label("At least one realised SMART Gear-VL segment lacks a complete 2024 rate "),
+      "because source confidentiality/suppression is preserved. No zero-filling ",
+      "or cross-year imputation is performed."
+    )
+  },
+
+  "Final interpretation",
+  if(
+    material || rank_change
+  ) {
+    "REVIEW_FULL_STEP2_RERUN"
+  } else {
+    "NO_FULL_STEP2_RERUN_INDICATED_BY_THIS_AUDIT"
+  },
+  if(
+    material || rank_change
+  ) {
+    paste0(
+      "A full rerun should be reviewed because the candidate accounting has a ",
+      "material GVA effect and/or changes frozen-run ordering."
+    )
+  } else {
+    paste0(
+      "At fixed fishing behaviour the candidate reference changes fleet GVA ",
+      "below the diagnostic materiality threshold and does not change run ",
+      smart31_report_label("ordering. The pooled 2022-2024 post-hoc accounting is therefore retained "),
+      "for reporting, with the GP distributional effect reported explicitly."
+    )
+  }
+)
+
+smart31_kable(
+  decision,
+  caption=
+    "Final economic-impact decision audit"
+)
+```
+
+## Export
+
+```{r economic_audit-17-export}
+
+tables <- list(
+  current_segment_mapping=cur_rate,
+  step2_vessel_rates=step2_vessel_rates,
+  new_rates_recent=r_recent,
+  new_rates_2024=r_2024,
+  mapped_rates_recent=recent,
+  mapped_rate_2024_availability=rate24_mapping_audit,
+  archive_audit=archive_audit,
+  gear_impact=gear_impact,
+  vessel_impact=vessel_impact,
+  fleet_impact=fleet,
+  ranking_audit=ranking,
+  vessel_distribution=vd,
+  economic_decomposition=decomp,
+  energy_sensitivity=ec_sens,
+  workforce_impact=workforce,
+  temporal_coverage=temporal_coverage,
+  temporal_sensitivity=temporal,
+  annex_economic_outputs=annex_economic_outputs,
+  decision_audit=decision
+)
+walk2(tables,names(tables),function(z,nm) readr::write_csv(z,file.path(out_dir,paste0("SMART31_economic_impact_",nm,"_",stamp,".csv")),na=""))
+result <- list(
+  metadata=list(
+    workflow="SMART3.1 economic impact audit",
+    version="SMART31.economic.audit.1",
+    status="ACCOUNTING_AUDIT_COMPLETE",
+    created_utc=format(Sys.time(),tz="UTC",usetz=TRUE),
+    step1_file=step1_path,
+    step1_md5=md5_s1,
+    step2_file=step2_path,
+    step2_md5=unname(tools::md5sum(step2_path)),
+    new_economic_file=new_path,
+    new_economic_md5=unname(tools::md5sum(new_path)),
+    main_reference_years=c(cfg$recent_year_min,cfg$recent_year_max),
+    benchmark_year=cfg$benchmark_year,
+    principal_EC="Frozen Step2 physical fishing + steaming fuel cost",
+    candidate_OC_LC=smart31_report_label("Pooled 2022-2024 new economic reference"),
+    other_income="Parallel AER/STECF reporting account",
+    capital="Excluded pending definition/unit clarification",
+    other_gvl_lineage=paste0(
+      "Exact Step2 scenario audit; mode=",
+      step2_other_gvl_mode,
+      "; beta=",
+      step2_other_gvl_beta,
+      "; cap=",
+      step2_other_gvl_cap
+    ),
+    strict_2024_sensitivity_complete=strict_2024_available,zero_GVL_missing_rate_rule="zero Gear exposure and zero-activity vessel contribution normalised to zero; no rate imputation",
+    behaviour="Frozen Step2 ; no re-optimisation",
+    no_step1_rerun=TRUE,
+    no_step2_rerun=TRUE,
+    no_step3_modification=TRUE
+  ),
+  tables=tables
+)
+rds <- file.path(out_dir,paste0("SMART31_economic_impact_audit_",stamp,".rds")); saveRDS(result,rds)
+cat("\n============================================================\nSMART3.1 ECONOMIC IMPACT AUDIT \n============================================================\n","Feasible runs audited: ",nrow(fleet),"\n","Reconstruction gates passed: ",sum(archive_audit$all_reconstruction_gates_pass)," / ",nrow(archive_audit),"\n","Material GVA flag: ",material,"\n","GVA ordering-change flag: ",rank_change,"\n","GP sign-flip flag: ",sign_flip,"\n","Maximum absolute fleet GVA change: ",scales::percent(max_gva,accuracy=.1),"\n",smart31_report_label("Strict 2024-only sensitivity complete: "),strict_2024_available,"\n","Decision: ",decision$status[decision$diagnostic=="Final interpretation"],"\n","RDS: ",normalizePath(rds),"\n","Output directory: ",normalizePath(out_dir),"\n",sep="")
+```

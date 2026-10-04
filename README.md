@@ -476,40 +476,13 @@ When a rule or compensation mechanism changes between periods, define separate s
 
 ## Running Step 2
 
-The main simulation notebook is versioned during active development. Record the exact file, repository commit, Step 1 bundle checksum and scenario definition used in an analysis.
+The simulation entry point is [`workflows/step2.Rmd`](workflows/step2.Rmd). Edit the shared case file, pin the exact Step 1 bundle and run from the repository root:
 
-### Automatic bundle selection
-
-Place the Step 1 principal RDS in `outputs/step1_simulation_inputs/`, edit the scenario list, and render the notebook. Versions that support automatic selection use the most recent matching bundle when no explicit path is provided.
-
-```r
-rmarkdown::render(
-  "SMART3.1_Step2_Simulation_<VERSION>.Rmd",
-  params = list(
-    step1_bundle_file = NULL,
-    output_directory = "outputs/step2_simulations"
-  ),
-  envir = new.env(parent = globalenv())
-)
+```bash
+Rscript scripts/run_workflow.R step2 config/case_study.R
 ```
 
-### Explicit bundle selection
-
-```r
-rmarkdown::render(
-  "SMART3.1_Step2_Simulation_<VERSION>.Rmd",
-  params = list(
-    step1_bundle_file = file.path(
-      "outputs", "step1_simulation_inputs",
-      "SMART31_step1_simulation_inputs_YYYYMMDD_HHMMSS.rds"
-    ),
-    output_directory = "outputs/step2_simulations"
-  ),
-  envir = new.env(parent = globalenv())
-)
-```
-
-Typical dependencies include `dplyr`, `tidyr`, `purrr`, `tibble`, `ggplot2`, `sf`, `scales`, `knitr` and `rmarkdown`, together with the spatial system libraries required by `sf`.
+Catch quotas, selected stock-level FMSY constraints, fuel price, scenario measures, sweeps and replicates are explicit case settings. See the [workflow guide](docs/workflows.md) for configuration and supported adapter boundaries.
 
 ## Step 3: fishing mortality and biological interface
 
@@ -619,23 +592,25 @@ The interfaces between stages are deliberate. Step 1 does not optimise scenarios
 
 ## Running SMART3.1
 
-### Step 1
+Start with the [workflow guide](docs/workflows.md) and [input contracts](docs/input-contracts.md). Copy [`config/case_study.example.R`](config/case_study.example.R) to the ignored local `config/case_study.R`, supply local paths and review all assumptions. Set `configured = TRUE` only after that review.
 
-Render the current Step 1 notebook after configuring the case study and source data. The principal output is the versioned simulation bundle under `outputs/step1_simulation_inputs/`.
+```bash
+Rscript scripts/install_dependencies.R all
+Rscript scripts/prepare_survey_cache.R config/case_study.R
+Rscript scripts/run_workflow.R step1 config/case_study.R
+```
 
-### Step 2
+Pin the exact output bundle in the case file before running Step 2. Then pin the Step 2 overview, run the economic audit, pin that audit and run Step 3:
 
-Render the current Step 2 notebook using the validated Step 1 bundle. Scenario definitions, management rules and search parameters are declared in the Step 2 configuration. Detailed run archives, lightweight summaries and diagnostics should be retained together.
+```bash
+Rscript scripts/run_workflow.R step2 config/case_study.R
+Rscript scripts/run_workflow.R economic_audit config/case_study.R
+Rscript scripts/run_workflow.R step3 config/case_study.R
+```
 
-### Step 3
+Each command runs in its own R process. The Rmd files contain their numerical code directly in populated chunks, so the full workflow can be read and edited in RStudio. Configuration and reusable helpers remain separate. Results go under `outputs/<case_id>/`. New case inputs, generated results and local configurations are excluded from Git.
 
-Render the current Step 3 notebook after Step 2 has produced successful scenario results and the controlled stock tables have been completed. The working Step 3 implementation expects three small biological input tables:
-
-- `SMART31_step3_stock_area_crosswalk.csv`;
-- `SMART31_step3_stock_age_parameters.csv`;
-- `SMART31_step3_stock_reference_points.csv`.
-
-The exact filenames of the notebooks are versioned during active development. Analyses should record the repository commit and file checksum rather than relying only on a human-readable version label.
+The public workflow retains FDI/MEDITS/GSA adapters, a baseline and two management alternatives, and an OTB Annex-style effort report. New data conventions require explicit adapter work; the template is not a universal importer. Synthetic checks run with `Rscript scripts/check_workflows.R`. Full case-study validation still requires the local data.
 
 ## Outputs and diagnostics
 
@@ -738,13 +713,13 @@ Important boundaries include:
 
 ## Repository contents
 
-The repository contains the evolving SMART3.1 research workflows and reusable R helpers. During active development, principal notebooks may carry versioned filenames.
+The repository contains configurable Rmd workflows with inline calculation chunks, reusable R helpers and synthetic checks. Git records implementation history; filenames do not encode successive working-group revisions.
 
 Core components include:
 
-- **Step 1 notebook** — set-up, spatial reconstruction, age structure, economics and validated bundle export;
-- **Step 2 notebook** — representative scenario construction and spatial effort simulation;
-- **Step 3 working notebook** — fishing-mortality conversion and population-model/management-table interface;
+- [`workflows/step1.Rmd`](workflows/step1.Rmd) — set-up, spatial reconstruction, age structure, economics and validated bundle export;
+- [`workflows/step2.Rmd`](workflows/step2.Rmd) — representative scenario construction and spatial effort simulation;
+- [`workflows/step3.Rmd`](workflows/step3.Rmd) — fishing-mortality conversion and population-model/management-table interface;
 - [`figures/workflow/01_smart31_workflow_overview.png`](figures/workflow/01_smart31_workflow_overview.png) — the existing conceptual overview of SMART3.1;
 - [`figures/workflow/02_effort_accessibility.png`](figures/workflow/02_effort_accessibility.png) — fishing effort and water-constrained accessibility;
 - [`figures/workflow/03_lpue_mass_balance.png`](figures/workflow/03_lpue_mass_balance.png) — mass-conserving LPUE reconstruction;
@@ -759,7 +734,7 @@ Core components include:
 - [`docs/reference-data/README.md`](docs/reference-data/README.md) — reference-data preparation workflow;
 - [`docs/reference-data/data_dictionary.csv`](docs/reference-data/data_dictionary.csv) — field definitions, units and key roles.
 
-The Step 3 workflow is documented here even while the executable interface remains under active integration with the partitioned Step 2 output format. Documentation of the third stage should therefore not be read as a claim that every versioned working notebook is already a stable public release.
+Additional components are [`workflows/economic_audit.Rmd`](workflows/economic_audit.Rmd), [`config/dependencies.R`](config/dependencies.R), the shared case configuration, survey-cache preparation, F-vector export and synthetic regression checks. The controlled-data interfaces remain subject to case-specific validation.
 
 Raw fleet, vessel, price and provider-restricted economic data are not distributed automatically. Users are responsible for access rights, confidentiality, licences and case-study-specific validation.
 
